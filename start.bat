@@ -22,47 +22,55 @@ echo   ================================
 echo    Douyin Video/Image Downloader
 echo   ================================
 echo.
-echo   1. Paste URL or share text
-echo   2. Enter a file path with URLs
+
+set "INPUT="
+set /p INPUT=Paste URL, share text, or file path:
+if "%INPUT%"=="" (
+    echo [ERROR] Input cannot be empty
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
+echo   1. Video only
+echo   2. Stats JSON only
+echo   3. All (video + stats JSON in folder)
 echo.
 
 set "MODE="
-set /p MODE=Choose mode [1=URL, 2=File]:
+set /p MODE=Choose mode [1/2/3, default=3]:
+if "%MODE%"=="" set "MODE=3"
 
-if "%MODE%"=="2" goto input_file
-
-:input_url
-set "DOUYIN_URL="
-set /p DOUYIN_URL=Paste Douyin link or share text:
-if "%DOUYIN_URL%"=="" (
-    echo [ERROR] Input cannot be empty
-    echo.
-    goto input_url
+echo.
+set "COMMENTS="
+set /p COMMENTS=Also scrape comments? [y/N, default=N]:
+if /i "%COMMENTS%"=="y" (
+    set "COMMENTS_FLAG=-c"
+) else (
+    set "COMMENTS_FLAG="
 )
-set "CMD_ARGS=%DOUYIN_URL%"
-goto input_output
 
-:input_file
-set "URL_FILE="
-set /p URL_FILE=Enter file path with URLs:
-if "%URL_FILE%"=="" (
-    echo [ERROR] File path cannot be empty
-    echo.
-    goto input_file
-)
-set "CMD_ARGS=-f %URL_FILE%"
+echo.
+set "WORKERS="
+set /p WORKERS=Parallel threads [1-8, default=1]:
+if "%WORKERS%"=="" set "WORKERS=1"
 
-:input_output
+echo.
 set "OUTPUT_DIR="
 set /p OUTPUT_DIR=Save to [Enter for default: .\downloads]:
 if "%OUTPUT_DIR%"=="" set "OUTPUT_DIR=.\downloads"
 
 echo.
-echo [INFO] Save:   %OUTPUT_DIR%
+echo [INFO] Input:    %INPUT%
+echo [INFO] Mode:     %MODE%
+echo [INFO] Comments: %COMMENTS_FLAG%
+echo [INFO] Workers:  %WORKERS%
+echo [INFO] Save:     %OUTPUT_DIR%
 echo [INFO] Downloading, please wait...
 echo.
 
-python "%~dp0main.py" %CMD_ARGS% -o "%OUTPUT_DIR%"
+python "%~dp0main.py" --input "%INPUT%" -m %MODE% %COMMENTS_FLAG% -w %WORKERS% -o "%OUTPUT_DIR%"
 
 if errorlevel 1 (
     echo.
