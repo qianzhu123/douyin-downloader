@@ -295,6 +295,62 @@ def _extract_slides_from_api(page, aweme_id: str) -> dict:
     }""", {"aweme_id": aweme_id, "timeout_ms": 10000})
 
 
+def _extract_video_from_api(page, aweme_id: str) -> dict:
+    """通过抖音 aweme detail API 提取单视频直链。
+
+    某些 /video/ 作品在 SSR 不注入可下载直链(未登录/特定作品/直播回放等)，
+    videoDetail 为空、<video> 是 blob/MSE。此时回退该接口：它返回
+    aweme.video.bit_rate / play_addr 里的 douyinvod mp4 直链。
+    在浏览器内 fetch，复用当前 cookies/credentials。
+    """
+    return page.evaluate("""async ({aweme_id, timeout_ms}) => {
+        const url = '/aweme/v1/web/aweme/detail/?aweme_id=' + aweme_id
+            + '&aid=6383&channel=channel_pc_web&device_platform=webapp';
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeout_ms);
+        try {
+            const resp = await fetch(url, { credentials: 'include', signal: controller.signal });
+            clearTimeout(timer);
+            const data = await resp.json();
+            if (data.status_code !== 0) return null;
+            const a = data.aweme_detail;
+            if (!a) return null;
+            // 影集(有 images)交给 _extract_slides_from_api，这里只处理单视频
+            if (a.images && a.images.length) return null;
+
+            const v = a.video || null;
+            let video_url = '';
+            if (v) {
+                const bitRates = v.bit_rate || [];
+                const nonDash = bitRates.filter(b =>
+                    !((b.play_addr?.url_list || [])[0] || '').includes('/dash/'));
+                nonDash.sort((a, b) => (b.quality_type || 0) - (a.quality_type || 0));
+                if (nonDash.length > 0) {
+                    video_url = (nonDash[0].play_addr?.url_list || [])[0] || '';
+                }
+                if (!video_url) video_url = (v.play_addr?.url_list || [])[0] || '';
+            }
+            const s = a.statistics || {};
+            return {
+                type: 'video',
+                video_url: video_url,
+                title: a.desc || '',
+                author: a.author?.nickname || '',
+                aweme_id: a.aweme_id || aweme_id,
+                stats: {
+                    digg_count: s.digg_count || 0,
+                    comment_count: s.comment_count || 0,
+                    collect_count: s.collect_count || 0,
+                    share_count: s.share_count || 0,
+                },
+            };
+        } catch (e) {
+            clearTimeout(timer);
+            return null;
+        }
+    }""", {"aweme_id": aweme_id, "timeout_ms": 10000})
+
+
 def _extract_slides_from_dom(page) -> dict:
     """从 DOM 逐页浏览笔记页面来提取每个 slide 的视频/图片信息。
 
@@ -857,6 +913,25 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
                 video_url = info.get("video_url", "") or video_url_from_ssr
                 title = info.get("title", "") or meta.get("title", "")
                 author = info.get("author", "") or meta.get("author", "")
+                # SSR 未注入可下载直链(未登录/特定作品/直播回放)时，
+                # 回退 aweme detail API 取平面 aweme.video 直链
+                if not video_url:
+                    api_aweme_id = aweme_id
+                    if not api_aweme_id:
+                        api_aweme_id = page.evaluate("""() => {
+                            const url = window.location.href;
+                            const m = url.match(/\\/video\\/(\\d+)/) || url.match(/\\/note\\/(\\d+)/);
+                            return m ? m[1] : '';
+                        }""") or ""
+                    if api_aweme_id:
+                        api_info = _extract_video_from_api(page, api_aweme_id)
+                        if api_info:
+                            video_url = api_info.get("video_url", "")
+                            title = title or api_info.get("title", "")
+                            author = author or api_info.get("author", "")
+                            aweme_id = aweme_id or api_info.get("aweme_id", "")
+                            if not meta.get("stats"):
+                                meta["stats"] = api_info.get("stats", {})
                 if not video_url:
                     raise RuntimeError("未能提取到有效的视频地址")
 
