@@ -155,8 +155,9 @@ def _extract_slides_info(page) -> dict:
                 }
             }
 
-            // 图片地址: 仅在非视频页时取；纯图集(clipType=2)兼容老逻辑
-            const imageUrls = (!isVideo ? (item.urlList || []) : []);
+            // 图片地址/封面: 始终取 url_list(视频页的 url_list 是该帧封面，作缩略图用)；
+            // 下载时按 media_type 分流，视频页走 video_url 不会误用此处。
+            const imageUrls = item.urlList || [];
             const bestImage = imageUrls.length ? (imageUrls.find(u => u.includes('.jpeg')) || imageUrls[0] || '') : '';
 
             return {
@@ -256,9 +257,9 @@ def _extract_slides_from_api(page, aweme_id: str) -> dict:
                     }
                 }
 
-                // 图片地址: 仅在该页确实不是视频时才取(影集视频页无需图片地址)；
-                // 兼容老逻辑: 纯图集(clipType=2)时取 url_list
-                const imageUrls = (!isVideo ? (img.url_list || []) : []);
+                // 封面/图片地址: 始终取 url_list(视频帧的 url_list 即该帧封面，作缩略图用)；
+                // 下载按 media_type 分流，视频页走 video_url 不会误用此处。
+                const imageUrls = img.url_list || [];
                 const bestImage = imageUrls.length ? (imageUrls.find(u => u.includes('.jpeg')) || imageUrls[0] || '') : '';
 
                 return {
@@ -833,16 +834,51 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
 
     _print("[*] 正在启动浏览器...")
 
+    import os as _os
+    _profile_env = _os.environ.get("DOUYIN_PROFILE", "default")
+    _user_data_dir: Path | None = None
+    if _profile_env:
+        if _profile_env == "default":
+            _cand = Path(__file__).resolve().parent / "douyin_profile"
+            _user_data_dir = _cand if _cand.exists() else None
+        else:
+            _user_data_dir = Path(_profile_env)
+            if not _user_data_dir.exists():
+                _print(f"[!] 指定 DOUYIN_PROFILE 不存在: {_user_data_dir}")
+                _user_data_dir = None
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled"],
-        )
-        context = browser.new_context(
-            viewport={"width": 1600, "height": 900},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-        )
-        page = context.new_page()
+        browser = None
+        context = None
+        page = None
+        _owns_context = False
+        if _user_data_dir:
+            try:
+                _print(f"[*] 复用登录态 profile: {_user_data_dir}")
+                context = p.chromium.launch_persistent_context(
+                    str(_user_data_dir),
+                    headless=True,
+                    viewport={"width": 1600, "height": 900},
+                    args=["--disable-blink-features=AutomationControlled"],
+                )
+                page = context.pages[0] if context.pages else context.new_page()
+                _owns_context = True
+                _print("[+] profile 启动成功(已登录态可下喜欢列表/私密)")
+            except Exception as e:
+                _print(f"[!] profile 启动失败({e})，回退裸启动")
+                context = None
+                page = None
+        if page is None:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+            context = browser.new_context(
+                viewport={"width": 1600, "height": 900},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+            )
+            page = context.new_page()
+
 
         try:
             _print(f"[*] 正在访问: {url}")
@@ -1206,12 +1242,217 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
                 raise RuntimeError("无法判断页面内容类型。请确认链接有效。")
 
         finally:
-            browser.close()
+            try:
+                if _owns_context and context is not None:
+                    context.close()
+                elif browser is not None:
+                    browser.close()
+            except Exception:
+                pass
 
 
 # ── 向后兼容 ──
 def download_douyin_video(url: str, output_dir: str = "") -> dict:
     return download_douyin(url, output_dir)
+
+
+def _open_logged_page(url: str):
+    """复用登录态 profile 打开并规约抖音页面，返回 (playwright_ctx, page, owns_context)。
+
+    调用方负责在 finally 里 close。规约逻辑与 download_douyin 一致：
+    聚合页(user/self?modal_id / jingxuan) → /video/<aweme_id>。
+    """
+    import os as _os
+    _profile_env = _os.environ.get("DOUYIN_PROFILE", "default")
+    user_data_dir = None
+    if _profile_env:
+        if _profile_env == "default":
+            _cand = Path(__file__).resolve().parent / "douyin_profile"
+            user_data_dir = _cand if _cand.exists() else None
+        else:
+            user_data_dir = Path(_profile_env)
+            if not user_data_dir.exists():
+                user_data_dir = None
+
+    pw = sync_playwright().start()
+    context = None
+    page = None
+    owns_context = False
+    try:
+        if user_data_dir:
+            try:
+                context = pw.chromium.launch_persistent_context(
+                    str(user_data_dir), headless=True,
+                    viewport={"width": 1600, "height": 900},
+                    args=["--disable-blink-features=AutomationControlled"],
+                )
+                page = context.pages[0] if context.pages else context.new_page()
+                owns_context = True
+            except Exception as e:
+                _print(f"[!] profile 启动失败({e})，回退裸启动")
+                context = None
+        if page is None:
+            browser = pw.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+            context = browser.new_context(
+                viewport={"width": 1600, "height": 900},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+            )
+            page = context.new_page()
+    except Exception:
+        pw.stop()
+        raise
+
+    # 规约：聚合页 → /video/<id>
+    is_short = "v.douyin.com" in url
+    if "/video/" not in url and "/note/" not in url:
+        m = re.search(r"modal_id=(\d+)", url)
+        if m and "/user/" in url:
+            url = f"https://www.douyin.com/video/{m.group(1)}"
+    page.goto(url, wait_until="domcontentloaded", timeout=20000)
+    try:
+        page.wait_for_selector("video, h1, [data-e2e='video-title'], [class*='note'], [class*='note-detail']", timeout=15000)
+    except Exception:
+        pass
+    page.wait_for_timeout(3000)
+    if is_short:
+        landed = page.url or url
+        if "/video/" not in landed and "/note/" not in landed:
+            m = re.search(r"modal_id=(\d+)", landed) or re.search(r"/video/(\d+)", landed)
+            if m:
+                page.goto(f"https://www.douyin.com/video/{m.group(1)}", wait_until="domcontentloaded", timeout=20000)
+    return pw, context, page, owns_context
+
+
+def extract_preview(url: str) -> dict:
+    """解析一个抖音链接，返回媒体预览信息(不下载)。
+
+    返回:
+        {
+          "url": 规约后 URL,
+          "type": "video" | "slide" | "image" | "unknown",
+          "title": str, "author": str, "aweme_id": str,
+          "stats": {digg_count, comment_count, collect_count, share_count},
+          "items": [
+             {"index": int, "media_type": "video"|"image",
+              "cover_url": str,        # 缩略图/封面
+              "duration_ms": int, "width": int, "height": int},
+             ...
+          ],
+        }
+    """
+    pw, context, page, owns = None, None, None, False
+    try:
+        pw, context, page, owns = _open_logged_page(url)
+    except Exception as e:
+        if pw:
+            try: pw.stop()
+            except Exception: pass
+        return {"url": url, "type": "unknown", "title": "", "author": "",
+                "aweme_id": "", "stats": {}, "items": [],
+                "error": f"打开页面失败: {e}"}
+
+    try:
+        meta = _extract_stats(page) or {}
+        aweme_id = meta.get("aweme_id", "") or page.evaluate("""() => {
+            const u = window.location.href;
+            const m = u.match(/\\/video\\/(\\d+)/) || u.match(/\\/note\\/(\\d+)/);
+            return m ? m[1] : '';
+        }""") or ""
+        content_type = _extract_content_type(page)
+        items = []
+
+        if content_type == "video":
+            info = _extract_video_info(page)
+            video_url = info.get("video_url", "")
+            title = info.get("title", "") or meta.get("title", "")
+            author = info.get("author", "") or meta.get("author", "")
+            if not video_url:
+                api_id = aweme_id
+                if not api_id:
+                    m = page.url and re.search(r"/video/(\d+)", page.url)
+                    api_id = m.group(1) if m else ""
+                if api_id:
+                    api_info = _extract_video_from_api(page, api_id)
+                    if api_info:
+                        video_url = api_info.get("video_url", "")
+                        title = title or api_info.get("title", "")
+                        author = author or api_info.get("author", "")
+                        aweme_id = aweme_id or api_info.get("aweme_id", "")
+                        if not meta.get("stats"):
+                            meta["stats"] = api_info.get("stats", {})
+            # 封面：优先 SSR video cover，其次 <video>.poster
+            cover = page.evaluate("""() => {
+                const vd = window.SSR_RENDER_DATA?.app?.videoDetail?.video;
+                if (vd) {
+                    const c = vd.cover || vd.originCover || vd.dynamicCover;
+                    if (c?.url_list?.[0]) return c.url_list[0];
+                }
+                const v = document.querySelector('video');
+                return v?.poster || '';
+            }""") or ""
+            dur = page.evaluate("""() => {
+                const v = window.SSR_RENDER_DATA?.app?.videoDetail?.video;
+                return v?.duration || document.querySelector('video')?.duration || 0;
+            }""") or 0
+            items = [{"index": 0, "media_type": "video",
+                      "cover_url": cover, "duration_ms": int(dur) * 1000,
+                      "width": 0, "height": 0, "video_url": video_url}]
+
+        elif content_type == "slide":
+            si = _extract_slides_info(page)
+            title = si.get("title", "") or meta.get("title", "")
+            author = si.get("author", "") or meta.get("author", "")
+            aweme_id = si.get("aweme_id", "") or aweme_id
+            if not meta.get("stats"):
+                meta["stats"] = si.get("stats", {})
+            for s in (si.get("slides") or []):
+                cover = s.get("best_image_url", "")
+                items.append({
+                    "index": s.get("index", 0),
+                    "media_type": s.get("media_type", "image"),
+                    "cover_url": cover,
+                    "duration_ms": int(s.get("duration", 0)),
+                    "width": s.get("width", 0), "height": s.get("height", 0),
+                    "video_url": s.get("video_url", ""),
+                    "image_urls": s.get("image_urls", []),
+                })
+
+        elif content_type == "image":
+            ti = _extract_image_title_author(page)
+            title = ti.get("title", "") or meta.get("title", "")
+            author = ti.get("author", "") or meta.get("author", "")
+            imgs = page.evaluate("""() => {
+                return [...document.querySelectorAll('.aweme-image, [data-e2e="image-list"] img, .note-content img')]
+                    .map(i => i.currentSrc || i.src).filter(u => u);
+            }""") or []
+            for i, u in enumerate(imgs):
+                items.append({"index": i, "media_type": "image",
+                              "cover_url": u, "duration_ms": 0,
+                              "width": 0, "height": 0})
+
+        return {
+            "url": page.url or url,
+            "type": content_type,
+            "title": title, "author": author, "aweme_id": aweme_id,
+            "stats": meta.get("stats", {}),
+            "items": items,
+        }
+    except Exception as e:
+        return {"url": url, "type": "unknown", "title": "", "author": "",
+                "aweme_id": "", "stats": {}, "items": [], "error": str(e)}
+    finally:
+        try:
+            if owns and context is not None:
+                context.close()
+        except Exception:
+            pass
+        try:
+            pw.stop()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

@@ -21,6 +21,14 @@ env/
 # Downloads (user-local content)
 downloads/
 
+# 登录态 profile(含抖音账号 cookie，绝不可提交)
+douyin_profile/
+
+# 构建产物/图标预览/日志
+app_icon.png
+build.log
+*.log
+
 # OS
 .DS_Store
 Thumbs.db
