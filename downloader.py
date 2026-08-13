@@ -133,8 +133,13 @@ def _extract_slides_info(page) -> dict:
 
         const slides = vd.images.map((item, i) => {
             const v = item.video;
-            const clipType = item.clipType || 0;  // 2=图片, 4=视频
-            const isVideo = clipType === 4 && !!v;
+            const clipType = item.clipType || 0;  // 2=图片, 4=视频, 5=影集视频帧(带 mp4)
+            // 判定是否为视频页：以"有 item.video 且可下载直链"为准，不能只认 clipType===4。
+            // 抖音影集(mediaType=42/isSlides)每页常有 clipType=5 且带 mp4，按图片处理会全部漏下载。
+            const _playApi = v?.playApi || '';
+            const _bitRateHas = (v?.bitRateList || []).some(b => !b.playApi?.includes('/dash/'));
+            const hasRealVideo = !!(v && (_playApi || _bitRateHas));
+            const isVideo = hasRealVideo;
 
             // 视频地址: 优先 bitRateList 中非 dash 的最高画质，再 playApi
             let video_url = '';
@@ -150,9 +155,9 @@ def _extract_slides_info(page) -> dict:
                 }
             }
 
-            // 图片地址: 优先 jpeg 格式（最高画质），再取第一个 webp
-            const imageUrls = item.urlList || [];
-            const bestImage = imageUrls.find(u => u.includes('.jpeg')) || imageUrls[0] || '';
+            // 图片地址: 仅在非视频页时取；纯图集(clipType=2)兼容老逻辑
+            const imageUrls = (!isVideo ? (item.urlList || []) : []);
+            const bestImage = imageUrls.length ? (imageUrls.find(u => u.includes('.jpeg')) || imageUrls[0] || '') : '';
 
             return {
                 index: i,
@@ -226,8 +231,15 @@ def _extract_slides_from_api(page, aweme_id: str) -> dict:
 
             const slides = aweme.images.map((img, i) => {
                 const v = img.video;
-                const clipType = img.clip_type || 0;  // 2=图片, 4=视频
-                const isVideo = clipType === 4 && !!v;
+                const clipType = img.clip_type || 0;  // 2=图片, 4=视频, 5=影集视频帧(带 mp4)
+                // 判定是否为视频页：以"有 img.video 且 play_addr/bit_rate 里有可下载直链"为准，
+                // 不能只认 clipType===4 —— 抖音影集(Slides)每页 clipType 常为 5 且带 mp4，
+                // 若按图片处理会全部漏下载(mediaType=42/isSlides=true)。
+                const _videoUrl0 = (v && v.play_addr && (v.play_addr.url_list || [])[0]) || '';
+                const _bitRateHas = v && (v.bit_rate || []).some(b =>
+                    !((b.play_addr && (b.play_addr.url_list || [])[0] || '').includes('/dash/')));
+                const hasRealVideo = !!(v && (_videoUrl0 || _bitRateHas));
+                const isVideo = hasRealVideo;
 
                 // 视频地址: 优先 bit_rate 中非 dash 的最高画质，再 play_addr
                 let video_url = '';
@@ -244,9 +256,10 @@ def _extract_slides_from_api(page, aweme_id: str) -> dict:
                     }
                 }
 
-                // 图片地址: 优先 jpeg 格式（最高画质），再取第一个
-                const imageUrls = img.url_list || [];
-                const bestImage = imageUrls.find(u => u.includes('.jpeg')) || imageUrls[0] || '';
+                // 图片地址: 仅在该页确实不是视频时才取(影集视频页无需图片地址)；
+                // 兼容老逻辑: 纯图集(clipType=2)时取 url_list
+                const imageUrls = (!isVideo ? (img.url_list || []) : []);
+                const bestImage = imageUrls.length ? (imageUrls.find(u => u.includes('.jpeg')) || imageUrls[0] || '') : '';
 
                 return {
                     index: i,
