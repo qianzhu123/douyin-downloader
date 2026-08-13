@@ -10,7 +10,7 @@ GitHub：<https://github.com/qianzhu123/douyin-downloader>
 
 - 支持下载无水印视频（MP4）
 - 支持下载图集/笔记图片（WebP/JPG/PNG）
-- 支持 Slides/笔记混合内容（视频 + 图片）
+- 支持 Slides/笔记混合内容（视频 + 图片）；含「影集」类（每页均为短视频，clip_type=5）会逐页下载为 MP4
 - 自动识别短链接、完整视频链接、图文链接、精选页链接和分享文本
 - 支持从文件批量读取链接
 - 支持自定义输出目录

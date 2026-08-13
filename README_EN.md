@@ -10,7 +10,7 @@ GitHub: <https://github.com/qianzhu123/douyin-downloader>
 
 - Download watermark-free videos as MP4
 - Download image collections/notes as WebP/JPG/PNG
-- Support mixed Slides/notes content, including videos and images
+- Support mixed Slides/notes content, including videos and images; "photo album" type entries (each page is a short video, clip_type=5) are downloaded page-by-page as MP4
 - Automatically extract URLs from short links, full video links, note links, selected-page links, and share text
 - Batch download from a text file
 - Custom output directory
