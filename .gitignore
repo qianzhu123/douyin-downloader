@@ -32,6 +32,11 @@ build.log
 *.log
 gui_stdio.log
 login_error.log
+# 打包期 runtime hook 填充产物(源码模板 _runtime_hook.py 才是正式文件)
+_runtime_hook_filled.py
+# 临时调试 runner/诊断脚本(不入库)
+_run_debug.py
+_diag.py
 
 # 测试缓存
 .pytest_cache/

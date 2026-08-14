@@ -7,7 +7,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from downloader import download_douyin
+from src.downloader import download_douyin
 
 
 # ── 抖音 URL 匹配模式 ──
@@ -308,7 +308,7 @@ def main():
     _out_show = args.output
     if not _out_show:
         try:
-            from paths import default_download_dir
+            from src.paths import default_download_dir
             _out_show = str(default_download_dir())
         except Exception:
             _out_show = "./downloads/"

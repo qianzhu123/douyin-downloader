@@ -58,7 +58,7 @@ if "%WORKERS%"=="" set "WORKERS=1"
 
 echo.
 set "OUTPUT_DIR="
-set /p OUTPUT_DIR=Save to [Enter for default: .\downloads]:
+set /p OUTPUT_DIR=Save to [Enter for default: 用户目录\Downloads]:
 if "%OUTPUT_DIR%"=="" set "OUTPUT_DIR=.\downloads"
 
 echo.

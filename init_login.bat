@@ -33,12 +33,12 @@ echo   Douyin Downloader - Login State Check
 echo ===============================================
 echo.
 
-python init_login.py
+python -m src.init_login
 set "RC=%ERRORLEVEL%"
 
 echo.
 if "%RC%"=="0" (
-    echo [OK] Login state is ready. You can now launch the downloader (douyin-downloader.exe ^| python app_gui.py).
+    echo [OK] Login state is ready. You can now launch the downloader (dist\抖音下载器.exe ^| python app_gui.py).
 ) else (
     echo [FAIL] Login is not ready. Please follow the prompts above and retry.
 )

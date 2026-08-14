@@ -16,7 +16,10 @@ import sys
 import time
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
+# 模块已收进 src/ 包：__file__ 在 src/ 下，其父目录才是项目根。
+# 脚本态(裸跑 init_login.py / main.py)的 profile 应落"项目根/douyin_profile"，
+# 与重构前一致；exe 态不受影响(走 sys.executable 父目录)。详见 _frozen_dir()。
 
 
 def _ensure_stdio_for_frozen():

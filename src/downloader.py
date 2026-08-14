@@ -9,7 +9,11 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import httpx
-from playwright.sync_api import sync_playwright
+# 注意：playwright 在模块顶层 import 会让 PyInstaller 打包后的 exe 在加载期就
+# ModuleNotFoundError(spec 里 excludes 了 playwright，运行时靠 init_login 的
+# _use_system_playwright 把本机已装的 playwright 插 sys.path 复用)。故这里不在顶层
+# import，而是在真正调用 sync_playwright 的两处函数内延迟 import(sync_playwright 已
+# 在用到处 860/1287 写了 import)。这样模块加载不依赖 playwright，exe 也能起。
 
 # 中国时区 UTC+8
 _CST = timezone(timedelta(hours=8))
@@ -829,7 +833,7 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
     """
     if not output_dir:
         try:
-            from paths import default_download_dir
+            from src.paths import default_download_dir
             output_dir = str(default_download_dir())
         except Exception:
             output_dir = str(Path.cwd() / "downloads")
@@ -840,7 +844,7 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
 
     # 无控制台 exe 下 playwright 子进程需要有效 stdio + 去系统缓存找 chromium。
     try:
-        from init_login import _ensure_stdio_for_frozen, _point_to_system_chromium, _use_system_playwright
+        from src.init_login import _ensure_stdio_for_frozen, _point_to_system_chromium, _use_system_playwright
         _ensure_stdio_for_frozen()
         _point_to_system_chromium()
         _use_system_playwright()
@@ -850,13 +854,15 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
     # profile 统一用 init_login.profile_path()：exe 态落到 exe 旁、脚本态落到脚本旁，
     # 避免被 PyInstaller 临时解包目录(_MEIPASS)坑住找不到登录态。
     try:
-        from init_login import profile_path as _pp
+        from src.init_login import profile_path as _pp
         _user_data_dir: Path | None = _pp()
         if _user_data_dir and not _user_data_dir.exists():
             _user_data_dir = None
     except Exception:
         _user_data_dir = None
 
+    # 延迟 import playwright：顶层不 import 以免 exe 加载期 ModuleNotFoundError
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = None
         context = None
@@ -1274,7 +1280,7 @@ def _open_logged_page(url: str):
     """
     # profile 统一用 init_login.profile_path()：避免 PyInstaller 临时解包目录找不到登录态。
     try:
-        from init_login import profile_path as _pp, _ensure_stdio_for_frozen as _es, _point_to_system_chromium as _psc, _use_system_playwright as _usp
+        from src.init_login import profile_path as _pp, _ensure_stdio_for_frozen as _es, _point_to_system_chromium as _psc, _use_system_playwright as _usp
         _es()
         _psc()
         _usp()
@@ -1284,6 +1290,7 @@ def _open_logged_page(url: str):
     except Exception:
         user_data_dir = None
 
+    from playwright.sync_api import sync_playwright  # 延迟 import 见顶层说明
     pw = sync_playwright().start()
     context = None
     page = None

@@ -22,7 +22,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
-from downloader import extract_preview, download_douyin, _download_file, _sanitize_filename  # noqa: E402
+from src.downloader import extract_preview, download_douyin, _download_file, _sanitize_filename  # noqa: E402
 
 APP_NAME = "抖音下载器"
 QS = QtCore.QSize
@@ -180,7 +180,7 @@ class LoginWorker(QtCore.QObject):
     @QtCore.pyqtSlot()
     def run(self):
         from pathlib import Path as _P
-        from init_login import login_interactive, profile_path, check_login
+        from src.init_login import login_interactive, profile_path, check_login
         prof = _P(self.prof_str)
         self.log.emit(f"[*] 启动登录浏览器，profile → {prof}")
         self.log.emit("[*] 请在弹出窗口扫码登录抖音(可慢，收到验证码再填)")
@@ -355,7 +355,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._default_out_dir()
 
     def _default_out_dir(self):
-        from paths import default_download_dir
+        from src.paths import default_download_dir
         d = str(default_download_dir())
         self.out_edit.setText(d)
 
@@ -457,10 +457,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._lw_alive:
             self.log("[*] 登录已在进行中，请先在弹出窗口扫码")
             return
-        from init_login import profile_path
+        from src.init_login import profile_path
         prof = profile_path()
         try:
-            from init_login import check_login
+            from src.init_login import check_login
             ok, _ = check_login(prof)
             if ok:
                 self.log("[+] 当前已登录。如需换号继续点登录即可。")
@@ -689,7 +689,7 @@ def _chromium_installed() -> bool:
     存在即算就绪。
     """
     import os, glob
-    from init_login import _point_to_system_chromium
+    from src.init_login import _point_to_system_chromium
     _point_to_system_chromium()
     base = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
     roots = []
@@ -711,7 +711,7 @@ def _chromium_installed() -> bool:
 def _check_login_hint():
     """profile 登录态自检并提示。"""
     try:
-        from init_login import check_login, profile_path
+        from src.init_login import check_login, profile_path
         prof = profile_path()
         ok, msg = check_login(prof)
         return ok, msg, prof
@@ -722,7 +722,7 @@ def _check_login_hint():
 def main():
     # 必须最早：复用本机 playwright + 让它去系统 chromium 缓存找内核 + 重建 stdio
     try:
-        from init_login import (_point_to_system_chromium,
+        from src.init_login import (_point_to_system_chromium,
                                 _ensure_stdio_for_frozen,
                                 _use_system_playwright)
         _use_system_playwright()
