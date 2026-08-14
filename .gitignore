@@ -10,6 +10,7 @@ build/
 # Virtual environments
 venv/
 .venv/
+.venv-build/
 env/
 
 # IDE
@@ -24,10 +25,17 @@ downloads/
 # 登录态 profile(含抖音账号 cookie，绝不可提交)
 douyin_profile/
 
-# 构建产物/图标预览/日志
-app_icon.png
+# 构建产物/日志(日志通配 *.log 兜底，已含 build_run.log/build_venv.log)
 build.log
+# 只忽略根目录旧的图标预览 png；assets/ 下的图标资源(含 .png)需要提交，已放行
+/app_icon.png
 *.log
+gui_stdio.log
+login_error.log
+
+# 测试缓存
+.pytest_cache/
+.coverage
 
 # OS
 .DS_Store

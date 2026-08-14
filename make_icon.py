@@ -12,8 +12,10 @@ from PIL import Image
 import io
 
 HERE = Path(__file__).resolve().parent
-OUT_ICO = HERE / "app_icon.ico"
-OUT_PNG = HERE / "app_icon.png"
+ASSETS = HERE / "assets"
+ASSETS.mkdir(parents=True, exist_ok=True)
+OUT_ICO = ASSETS / "app_icon.ico"
+OUT_PNG = ASSETS / "app_icon.png"
 
 SVG = """\
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">

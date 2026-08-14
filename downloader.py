@@ -828,24 +828,34 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
         dict: 下载结果
     """
     if not output_dir:
-        output_dir = str(Path.cwd() / "downloads")
+        try:
+            from paths import default_download_dir
+            output_dir = str(default_download_dir())
+        except Exception:
+            output_dir = str(Path.cwd() / "downloads")
     base_path = Path(output_dir)
     base_path.mkdir(parents=True, exist_ok=True)
 
     _print("[*] 正在启动浏览器...")
 
-    import os as _os
-    _profile_env = _os.environ.get("DOUYIN_PROFILE", "default")
-    _user_data_dir: Path | None = None
-    if _profile_env:
-        if _profile_env == "default":
-            _cand = Path(__file__).resolve().parent / "douyin_profile"
-            _user_data_dir = _cand if _cand.exists() else None
-        else:
-            _user_data_dir = Path(_profile_env)
-            if not _user_data_dir.exists():
-                _print(f"[!] 指定 DOUYIN_PROFILE 不存在: {_user_data_dir}")
-                _user_data_dir = None
+    # 无控制台 exe 下 playwright 子进程需要有效 stdio + 去系统缓存找 chromium。
+    try:
+        from init_login import _ensure_stdio_for_frozen, _point_to_system_chromium, _use_system_playwright
+        _ensure_stdio_for_frozen()
+        _point_to_system_chromium()
+        _use_system_playwright()
+    except Exception:
+        pass
+
+    # profile 统一用 init_login.profile_path()：exe 态落到 exe 旁、脚本态落到脚本旁，
+    # 避免被 PyInstaller 临时解包目录(_MEIPASS)坑住找不到登录态。
+    try:
+        from init_login import profile_path as _pp
+        _user_data_dir: Path | None = _pp()
+        if _user_data_dir and not _user_data_dir.exists():
+            _user_data_dir = None
+    except Exception:
+        _user_data_dir = None
 
     with sync_playwright() as p:
         browser = None
@@ -1262,17 +1272,17 @@ def _open_logged_page(url: str):
     调用方负责在 finally 里 close。规约逻辑与 download_douyin 一致：
     聚合页(user/self?modal_id / jingxuan) → /video/<aweme_id>。
     """
-    import os as _os
-    _profile_env = _os.environ.get("DOUYIN_PROFILE", "default")
-    user_data_dir = None
-    if _profile_env:
-        if _profile_env == "default":
-            _cand = Path(__file__).resolve().parent / "douyin_profile"
-            user_data_dir = _cand if _cand.exists() else None
-        else:
-            user_data_dir = Path(_profile_env)
-            if not user_data_dir.exists():
-                user_data_dir = None
+    # profile 统一用 init_login.profile_path()：避免 PyInstaller 临时解包目录找不到登录态。
+    try:
+        from init_login import profile_path as _pp, _ensure_stdio_for_frozen as _es, _point_to_system_chromium as _psc, _use_system_playwright as _usp
+        _es()
+        _psc()
+        _usp()
+        user_data_dir = _pp()
+        if user_data_dir and not user_data_dir.exists():
+            user_data_dir = None
+    except Exception:
+        user_data_dir = None
 
     pw = sync_playwright().start()
     context = None

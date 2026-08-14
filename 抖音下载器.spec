@@ -6,21 +6,22 @@
 from PyInstaller.utils.hooks import collect_all
 
 datas = [
-    ('app_icon.ico', '.'),
+    ('assets/app_icon.ico', 'assets'),
 ]
 binaries = []
 hiddenimports = [
     'httpx',
-    'playwright',
-    'playwright.sync_api',
     'downloader',
 ]
 
-# 把 playwright 的 python 资源(驱动、node 等)全收进来；运行时首启再装 chromium
-pw = collect_all('playwright')
-datas += pw[0]
-binaries += pw[1]
-hiddenimports += pw[2]
+# 注意：不再 collect_all('playwright')。那是 PyInstaller 在 Anaconda-Python3.13
+# 上卡死几十分钟的根由(playwright 的 node 驱动含几千小文件，collect 扫描极慢/死循环)。
+# 改为运行时由 app_gui 动态把本机 site-packages 中的 playwright 插到 sys.path 前，
+# 复用本机已装的 playwright 驱动 + 本机 chromium(见 init_login._use_system_playwright)。
+# 代价：exe 仅在本机(已装 python+playwright)可跑 —— 对本机小工具可接受。
+
+# 仍把 init_login 显式收进来(GUI 调它)。
+hiddenimports += ['init_login']
 
 a = Analysis(
     ['app_gui.py'],
@@ -32,9 +33,12 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
+        # 排除会卡死的全部 playwright 收集；运行时走本机 site-packages。
+        'playwright', 'playwright.sync_api', 'playwright.async_api',
+        'playwright._impl', 'playwright._impl.__main__',
         # 只用 PyQt5，排除其它 Qt 绑定(否则 PyInstaller 报多 Qt 冲突)
         'PySide6', 'PySide2', 'PyQt6', 'PyQt4',
-        # 体积瘦身：用不到的重量级包
+        # 体积瘦身
         'matplotlib', 'numpy', 'pandas', 'IPython', 'jedi', 'parso',
         'black', 'yapf_third_party', 'astroid', 'pygments', 'sphinx',
         'docutils', 'babel', 'rich', 'zmq', 'nbformat', 'jsonschema',
@@ -64,5 +68,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='app_icon.ico',
+    icon='assets/app_icon.ico',
 )

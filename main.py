@@ -227,7 +227,7 @@ def main():
     parser.add_argument(
         "-o", "--output",
         default="",
-        help="Output directory (default: ./downloads/)",
+        help="输出目录(默认: 用户目录/Downloads，找不到则项目内 downloads/)",
     )
     parser.add_argument(
         "-w", "--workers",
@@ -305,7 +305,14 @@ def main():
     print(f"[INFO] Mode:  {mode_labels.get(args.mode, '?')}")
     print(f"[INFO] Comments: {'ON' if args.comments else 'OFF (use -c to enable)'}")
     print(f"[INFO] Workers: {args.workers}")
-    print(f"[INFO] Output: {args.output or './downloads/'}")
+    _out_show = args.output
+    if not _out_show:
+        try:
+            from paths import default_download_dir
+            _out_show = str(default_download_dir())
+        except Exception:
+            _out_show = "./downloads/"
+    print(f"[INFO] Output: {_out_show}")
     print()
 
     total = len(all_urls)

@@ -27,40 +27,73 @@ from downloader import extract_preview, download_douyin, _download_file, _saniti
 APP_NAME = "抖音下载器"
 QS = QtCore.QSize
 
-# ── 深色主题 ────────────────────────────────────────────────
+# ── 深色主题（统一字号/灰阶/层次，避免大小不一与暗淡） ─────────
+# 灰阶：正文 #f0f1f3 · 次要 #b8bdc4 · 提示 #8a909a · 背景 #25272b · 卡片/输入 #2d3036 · 边框 #3c4048
 QSS = """
-QMainWindow, QWidget#central { background: #1e1f22; }
-QLabel { color: #e6e6e6; }
-QLineEdit, QPlainTextEdit, QTextEdit {
-  background: #2a2b2f; color: #e6e6e6; border: 1px solid #3a3b40;
-  border-radius: 6px; padding: 6px;
+* { font-family: "Microsoft YaHei UI","Microsoft YaHei","Segoe UI"; }
+QMainWindow, QWidget#central { background: #25272b; color: #f0f1f3; }
+QLabel { color: #f0f1f3; background: transparent; }
+QWidget#card, QGroupBox, QListWidget, QPlainTextEdit, QLineEdit, QTextEdit {
+  background: #2d3036; color: #f0f1f3; border: 1px solid #3c4048;
+  border-radius: 8px; padding: 6px;
 }
-QLineEdit:focus, QPlainTextEdit:focus { border-color: #2f8cff; }
+QLineEdit, QPlainTextEdit, QTextEdit { selection-background-color: #2f8cff; }
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus { border-color: #2f8cff; }
+QLineEdit { padding: 10px 14px; }
+
 QPushButton {
-  background: #2f8cff; color: #fff; border: none; border-radius: 6px;
-  padding: 8px 18px; font-weight: 600;
+  background: #2f8cff; color: #ffffff; border: none; border-radius: 8px;
+  padding: 12px 26px; font-weight: 600; min-height: 28px;
 }
 QPushButton:hover { background: #4a9bff; }
 QPushButton:pressed { background: #2570d8; }
-QPushButton:disabled { background: #44454a; color: #888; }
-QPushButton[role="secondary"] { background: #3a3b40; color: #e6e6e6; }
-QPushButton[role="secondary"]:hover { background: #4a4b50; }
-QCheckBox { color: #e6e6e6; spacing: 6px; }
+QPushButton:disabled { background: #3c4048; color: #6a6f78; }
+QPushButton[role="secondary"] { background: #3c4048; color: #f0f1f3; }
+QPushButton[role="secondary"]:hover { background: #4a4f57; }
+QPushButton[role="danger"] { background: #d2473a; color: #ffffff; }
+QPushButton[role="danger"]:hover { background: #e25a4d; }
+
+QCheckBox { color: #f0f1f3; spacing: 8px; background: transparent; }
+
 QProgressBar {
-  background: #2a2b2f; border: 1px solid #3a3b40; border-radius: 6px;
-  text-align: center; color: #e6e6e6; height: 22px;
+  background: #2d3036; border: 1px solid #3c4048; border-radius: 8px;
+  text-align: center; color: #f0f1f3; height: 26px; min-height: 26px;
 }
-QProgressBar::chunk { background: #2f8cff; border-radius: 5px; }
-QListWidget {
-  background: #232428; color: #e6e6e6; border: 1px solid #3a3b40;
-  border-radius: 6px;
+QProgressBar::chunk { background: #2f8cff; border-radius: 7px; }
+
+QListWidget { border-radius: 8px; outline: 0; }
+QListWidget::item { padding: 10px; border-radius: 6px; }
+QListWidget::item:selected { background: #2f8cff; color: #ffffff; }
+
+QStatusBar { background: #25272b; color: #f0f1f3; font-weight: 600; border-top: 1px solid #3c4048; }
+QStatusBar QLabel { color: #f0f1f3; padding: 2px 6px; }
+
+QMessageBox { background: #2d3036; }
+QMessageBox QLabel, QMessageBox QTextEdit { color: #f0f1f3; }
+QMessageBox QPushButton {
+  background: #2f8cff; color: #ffffff; border: none; border-radius: 8px;
+  padding: 10px 28px; font-weight: 600; min-width: 110px;
 }
-QListWidget::item { padding: 8px; }
-QStatusBar { background: #1a1b1e; color: #aaa; }
-QScrollBar:vertical { background: #2a2b2f; width: 10px; border: none; }
-QScrollBar::handle:vertical { background: #4a4b50; border-radius: 5px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-QSplitter::handle { background: #3a3b40; }
+QMessageBox QPushButton:hover { background: #4a9bff; }
+QMessageBox QPushButton[role="secondary"] { background: #3c4048; color: #f0f1f3; }
+QDBusArgument { } /* noop */
+
+QDialog { background: #25272b; color: #f0f1f3; }
+QToolTip { color: #f0f1f3; background: #2d3036; border: 1px solid #2f8cff; padding: 4px 8px; }
+
+QScrollBar:vertical { background: transparent; width: 12px; border: none; margin: 2px; }
+QScrollBar::handle:vertical { background: #4a4f57; border-radius: 5px; min-height: 28px; }
+QScrollBar::handle:vertical:hover { background: #5a5f68; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical, QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; height: 0; width: 0; }
+QScrollBar:horizontal { background: transparent; height: 12px; border: none; margin: 2px; }
+QScrollBar::handle:horizontal { background: #4a4f57; border-radius: 5px; min-width: 28px; }
+QScrollBar::handle:horizontal:hover { background: #5a5f68; }
+
+QSplitter::handle { background: #3c4048; }
+QSplitter::handle:hover { background: #2f8cff; }
+
+QGroupBox { margin-top: 14px; padding-top: 14px; }
+QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; color: #b8bdc4; }
 """
 
 TYP_BADGE = {"video": "📹 视频", "image": "🖼 图片", "unknown": "❓"}
@@ -136,6 +169,31 @@ class ThumbLoader(QtCore.QThread):
 
 
 # ── 下载线程 ───────────────────────────────────────────────
+class LoginWorker(QtCore.QObject):
+    log = QtCore.pyqtSignal(str)
+    finished = QtCore.pyqtSignal(bool, str)  # ok, message
+
+    def __init__(self, prof_str: str):
+        super().__init__()
+        self.prof_str = prof_str
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        from pathlib import Path as _P
+        from init_login import login_interactive, profile_path, check_login
+        prof = _P(self.prof_str)
+        self.log.emit(f"[*] 启动登录浏览器，profile → {prof}")
+        self.log.emit("[*] 请在弹出窗口扫码登录抖音(可慢，收到验证码再填)")
+        self.log.emit("[*] 登录成功会自动检测并完成；浏览器可随时手动关闭")
+        ok = login_interactive(
+            prof, headless=False, timeout_sec=1800,
+            block_console=False,
+            on_progress=lambda s: self.log.emit(s),
+        )
+        ok2, msg2 = check_login(prof)
+        self.finished.emit(ok2, msg2)
+
+
 class DownloadWorker(QtCore.QObject):
     progress = QtCore.pyqtSignal(int, int)   # done, total
     log = QtCore.pyqtSignal(str)
@@ -241,20 +299,20 @@ class MediaItemWidget(QtWidgets.QWidget):
         self.check.stateChanged.connect(lambda st: on_toggle_media(index, st == QtCore.Qt.Checked))
         # 角标
         badge = QtWidgets.QLabel(TYP_BADGE.get(media_type, ""))
-        badge.setStyleSheet("color:#ffd166;font-weight:700;background:#000000a0;"
-                            "padding:1px 6px;border-radius:8px;")
-        badge.setFixedSize(70, 18)
+        badge.setStyleSheet("color:#ffe08a;font-weight:700;background:#000000b0;"
+                            "padding:1px 8px;border-radius:8px;")
+        badge.setFixedSize(72, 20)
         # 缩略图占位
         self.thumb = QtWidgets.QLabel()
         self.thumb.setFixedSize(120, 160)
         self.thumb.setAlignment(QtCore.Qt.AlignCenter)
-        self.thumb.setStyleSheet("background:#2a2b2f;border-radius:6px;color:#666;")
+        self.thumb.setStyleSheet("background:#2d3036;border-radius:8px;color:#6a6f78;border:1px solid #3c4048;")
         self.thumb.setText("加载中…")
         self.duration_lbl = QtWidgets.QLabel("")
         if duration_ms:
             secs = duration_ms // 1000
             self.duration_lbl.setText(f"{secs//60:02d}:{secs%60:02d}")
-        self.duration_lbl.setStyleSheet("color:#aaa;font-size:11px;")
+        self.duration_lbl.setStyleSheet("color:#b8bdc4;background:#000000b0;padding:1px 6px;border-radius:4px;")
         # 叠加角标到缩略图
         overlay = QtWidgets.QHBoxLayout()
         overlay.setContentsMargins(4, 4, 4, 4)
@@ -297,7 +355,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._default_out_dir()
 
     def _default_out_dir(self):
-        d = str(HERE / "downloads")
+        from paths import default_download_dir
+        d = str(default_download_dir())
         self.out_edit.setText(d)
 
     def _build_ui(self):
@@ -332,10 +391,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # ── 信息条 ──
         self.title_lbl = QtWidgets.QLabel("尚未解析")
-        self.title_lbl.setStyleSheet("font-size:14px;font-weight:600;padding:4px 0;")
+        self.title_lbl.setStyleSheet("font-weight:600;padding:4px 0;")
         root.addWidget(self.title_lbl)
         self.stats_lbl = QtWidgets.QLabel("")
-        self.stats_lbl.setStyleSheet("color:#9aa0a6;font-size:12px;")
+        self.stats_lbl.setStyleSheet("color:#b8bdc4;")
         root.addWidget(self.stats_lbl)
 
         # ── 媒体网格 + 选择控件 ──
@@ -385,7 +444,54 @@ class MainWindow(QtWidgets.QMainWindow):
         root.addWidget(self.log_view)
 
         self.status = self.statusBar()
-        self.status.showMessage(f"{APP_NAME} · 先运行 init_login.py 完成登录态")
+        self.btn_login = QtWidgets.QPushButton("登录")
+        self.btn_login.setProperty("role", "secondary")
+        self.btn_login.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_login.clicked.connect(self.start_login)
+        self.status.addPermanentWidget(self.btn_login)
+        self._lw_alive = False
+        self.status.showMessage(f"{APP_NAME} · 就绪")
+
+    # ── 登录(子线程，避免阻塞 UI) ──
+    def start_login(self):
+        if self._lw_alive:
+            self.log("[*] 登录已在进行中，请先在弹出窗口扫码")
+            return
+        from init_login import profile_path
+        prof = profile_path()
+        try:
+            from init_login import check_login
+            ok, _ = check_login(prof)
+            if ok:
+                self.log("[+] 当前已登录。如需换号继续点登录即可。")
+        except Exception:
+            pass
+        self.log(f"[*] 开始登录，profile → {prof}")
+        self.status.showMessage("登录中…请扫码")
+        self.btn_login.setEnabled(False)
+        self._lw_alive = True
+        self._login_thread = QtCore.QThread()
+        self._login_worker = LoginWorker(str(prof))
+        self._login_worker.moveToThread(self._login_thread)
+        self._login_worker.log.connect(self.log)
+        self._login_thread.started.connect(self._login_worker.run)
+        self._login_worker.finished.connect(self._on_login_done)
+        self._login_worker.finished.connect(self._login_thread.quit)
+        self._login_thread.start()
+
+    def _on_login_done(self, ok, msg):
+        self._lw_alive = False
+        self.btn_login.setEnabled(True)
+        if ok:
+            self.log(f"[+] {msg}")
+            self.status.showMessage(f"已登录 · {msg}")
+            QtWidgets.QMessageBox.information(self, "登录成功", f"{msg}")
+        else:
+            self.log(f"[x] 登录未完成: {msg}")
+            self.status.showMessage("登录未完成 —— 可重新点登录")
+            QtWidgets.QMessageBox.warning(self, "登录未完成",
+                "未检测到登录态。请确认已在弹出窗口完成扫码，再点【登录】重试。\n"
+                f"详情：{msg}")
 
     # ── 解析预览 ──
     def do_preview(self):
@@ -552,31 +658,54 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 def _ensure_chromium():
-    """首启自检 chromium；缺失则用 playwright 驱动自动安装(方案 A)。"""
-    try:
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            b = p.chromium.launch(headless=True)
-            b.close()
+    """首启自检 chromium 浏览器内核是否已安装；缺失则用 playwright 驱动自动安装。
+
+    采用"探测可执行是否就绪"而非"真起一个浏览器"的方式：
+    真起浏览器在打包/无显示环境/被安全软件拦时极易抛异常被误判为未就绪，
+    且白白起停一次拖慢首启。downloader 实际用的是 launch_persistent_context，
+    与探测方式解耦，避免假阴性误报。
+    """
+    if _chromium_installed():
         return True
-    except Exception:
-        pass
     print("[*] chromium 未就绪，自动安装中(约 150MB，需联网)...")
     try:
         from playwright._impl._driver import compute_driver_executable
         import subprocess
         exe = compute_driver_executable()
         subprocess.run([exe, "install", "chromium"], check=False)
-        # 再验一次
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            b = p.chromium.launch(headless=True)
-            b.close()
-        return True
+        return _chromium_installed()
     except Exception as e:
         print(f"[x] chromium 自动安装失败: {e}")
         print("    请手动运行: playwright install chromium")
         return False
+
+
+def _chromium_installed() -> bool:
+    """纯文件探测 chromium 内核是否就绪。不启动任何 playwright 进程，
+    避免首启白白起停一次 node 驱动、拖慢启动。
+
+    优先用 _point_to_system_chromium 设好的 PLAYWRIGHT_BROWSERS_PATH，
+    回退系统默认 %LocalAppData%/ms-playwright。只要任一 chromium-*/chrome-win64/chrome.exe
+    存在即算就绪。
+    """
+    import os, glob
+    from init_login import _point_to_system_chromium
+    _point_to_system_chromium()
+    base = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    roots = []
+    if base:
+        roots.append(Path(base))
+    for var in ("LocalAppData", "AppData"):
+        b = os.environ.get(var)
+        if b:
+            roots.append(Path(b) / "ms-playwright")
+    for r in roots:
+        if not r.exists():
+            continue
+        for g in glob.glob(str(r / "chromium-*")):
+            if (Path(g) / "chrome-win64" / "chrome.exe").exists():
+                return True
+    return False
 
 
 def _check_login_hint():
@@ -591,9 +720,24 @@ def _check_login_hint():
 
 
 def main():
+    # 必须最早：复用本机 playwright + 让它去系统 chromium 缓存找内核 + 重建 stdio
+    try:
+        from init_login import (_point_to_system_chromium,
+                                _ensure_stdio_for_frozen,
+                                _use_system_playwright)
+        _use_system_playwright()
+        _point_to_system_chromium()
+        _ensure_stdio_for_frozen()
+    except Exception:
+        pass
     app = QtWidgets.QApplication(sys.argv)
+    # 全局放大字体，解决界面文字偏小看不清
+    _f = app.font()
+    _f.setPointSize(max(_f.pointSize() or 9, 11))
+    _f.setFamily("Microsoft YaHei UI, Microsoft YaHei, Segoe UI")
+    app.setFont(_f)
     app.setStyleSheet(QSS)
-    ico = HERE / "app_icon.ico"
+    ico = HERE / "assets" / "app_icon.ico"
     if ico.exists():
         app.setWindowIcon(QtGui.QIcon(str(ico)))
     # chromium 自检(缺则自动安装)
@@ -605,10 +749,20 @@ def main():
     # 登录态提示
     ok, msg, prof = _check_login_hint()
     if not ok:
-        QtWidgets.QMessageBox.information(w, "登录态",
-            f"检测到登录态缺失:\n{msg}\n\n请先运行 init_login.py 完成登录，"
-            f"否则喜欢列表/私密链接可能无法下载。")
-        w.status.showMessage("未登录 —— 请先运行 init_login.py")
+        box = QtWidgets.QMessageBox(w)
+        box.setIcon(QtWidgets.QMessageBox.Warning)
+        box.setWindowTitle("登录态未就绪")
+        box.setText("检测到登录态缺失：")
+        box.setInformativeText(
+            f"{msg}\n\n未登录时，喜欢列表/私密链接可能无法下载。\n"
+            f"点【立即登录】会弹出浏览器，扫码登录抖音即可。")
+        btn_login = box.addButton("立即登录", QtWidgets.QMessageBox.AcceptRole)
+        box.addButton("以后再说", QtWidgets.QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is btn_login:
+            w.start_login()
+        else:
+            w.status.showMessage("未登录 —— 状态栏右侧登录后再下载")
     else:
         w.status.showMessage(f"已就绪 · {msg}")
     sys.exit(app.exec_())
