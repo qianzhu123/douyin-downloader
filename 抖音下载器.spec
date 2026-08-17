@@ -23,7 +23,19 @@ RUNTIME_HOOK = str((_SPECDIR / "_runtime_hook_filled.py").resolve())
 datas = [
     ('assets/app_icon.ico', 'assets'),
 ]
-binaries = []
+# ── OpenSSL 3 DLL：conda 环境藏在 Library\bin，PyInstaller 默认不扫该目录，
+# 导致打包后 _ssl.pyd 运行时找不到 libssl-3/libcrypto-3 →
+# "DLL load failed while importing _ssl: The specified procedure could not be found."
+# httpx(封面抓取/下载) 全走 https，_ssl 加载失败 = 预览封面卡"加载中"、下载直接崩。
+# 显式把匹配版本(3.x)的 ssl/crypto DLL 收进 exe 根目录，确保运行时优先命中。
+import os as _os, sys as _sys
+_conda_libbin = _os.path.join(_sys.base_prefix, "Library", "bin")
+_ssl_dlls = []
+for _n in ("libssl-3-x64.dll", "libcrypto-3-x64.dll"):
+    _p = _os.path.join(_conda_libbin, _n)
+    if _os.path.exists(_p):
+        _ssl_dlls.append((_p, '.'))
+binaries = _ssl_dlls
 # 模块已收进 src/ 包：必须把 src 及其子模块显式列进 hiddenimports，
 # 否则 onefile 在运行时 import 不到包(App虚树)。httpx 同理显式列。
 hiddenimports = [
@@ -32,6 +44,18 @@ hiddenimports = [
     'src.downloader',
     'src.init_login',
     'src.paths',
+    # ── playwright 运行时(从本机 site-packages 加载)依赖的一批 stdlib 纯 py 模块 ──
+    # 背景：spec 排除了 playwright，导致 PyInstaller 静态依赖图里看不到任何
+    #   "只有 playwright 才会 import 的 stdlib"。这些模块 app 代码自身不用，
+    #   不会被自动收集进 PYZ；exe 运行时一旦本机 playwright 触发
+    #   `import uuid`(playwright/_impl/_waiter.py:18)就崩
+    #   "No module named 'uuid'" / 解析失败：打开页面失败。
+    # 修法：把 playwright 独用(本 app 不直接用)的 stdlib 显式列进 hiddenimports，
+    #   强令 PyInstaller 收集进 PYZ，使其在 _MEIPASS 解包后可 import。
+    # 名单由扫描 playwright 包对 stdlib 的 import、去除 app 自身已用的口径得出。
+    'uuid', 'mimetypes', 'contextvars', 'abc', 'asyncio', 'base64',
+    'collections', 'contextlib', 'inspect', 'math', 'stat', 'struct',
+    'types', 'typing', 'urllib',
 ]
 
 # 注意：不再 collect_all('playwright')。那是 PyInstaller 在 Anaconda-Python3.13

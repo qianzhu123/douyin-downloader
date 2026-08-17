@@ -35,8 +35,21 @@ def _ensure_stdio_for_frozen():
     try:
         log_path = _frozen_dir() / "gui_stdio.log"
         f = open(str(log_path), "a", encoding="utf-8")
+        # Node/外部代码常读 stdout 的属性(encoding/isatty/fileno/writable/mode/newlines 等)，
+        # windowed exe 的 stdout 原本是 None。_Tee 必须把这一整套都撑起来，否则 playwright/node
+        # 驱动一旦访问 `sys.stdout.encoding` / `.fileno()` 就 AttributeError 崩
+        # （实测报 "_Tee object has no attribute 'encoding'"）。
         class _Tee:
-            def __init__(s, base): s.base = base
+            def __init__(s, base):
+                s.base = base
+                s.encoding = getattr(base, "encoding", "utf-8")
+                s.errors = getattr(base, "errors", "replace")
+                s.mode = getattr(base, "mode", "w")
+                s.buffer = getattr(base, "buffer", None)
+                s.line_buffering = getattr(base, "line_buffering", False)
+                s.write_through = getattr(base, "write_through", True)
+                s.newlines = None
+                s.name = getattr(base, "name", str(log_path))
             def write(s, t):
                 try: f.write(t); f.flush()
                 except Exception: pass
@@ -49,6 +62,21 @@ def _ensure_stdio_for_frozen():
                 if s.base is not None:
                     try: s.base.flush()
                     except Exception: pass
+            def isatty(s): return False
+            def writable(s): return True
+            def readable(s): return False
+            def seekable(s): return False
+            def fileno(s):
+                # 提供底层日志文件的 fd，让需要真 fd 的调用能拿到一个有效值。
+                try: return f.fileno()
+                except Exception: raise OSError("no fileno for tee")
+            def tell(s): return 0
+            def seek(s, *a, **k): pass
+            def truncate(s, *a, **k): pass
+            def close(s):
+                try: f.close()
+                except Exception: pass
+            def __repr__(s): return f"<_Tee to {log_path}>"
         if sys.stdout is None: sys.stdout = _Tee(None)
         if sys.stderr is None: sys.stderr = _Tee(None)
         if sys.stdin is None:
