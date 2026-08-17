@@ -817,7 +817,8 @@ def _decide_output_dir(base_path: Path, mode: int, title: str, content_type: str
 # ════════════════════════════════════════════════════════════════
 
 def download_douyin(url: str, output_dir: str = "", mode: int = 1,
-                    fetch_comments: bool = False) -> dict:
+                    fetch_comments: bool = False,
+                    on_progress=None) -> dict:
     """
     下载抖音视频/图集 + 互动数据（可选评论）
     每个 URL 用独立的浏览器实例，可多线程并行。
@@ -827,10 +828,18 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
         output_dir:    输出目录
         mode:          1=仅下载视频/图集, 2=仅数据(JSON), 3=全部
         fetch_comments: 是否抓取评论（默认否，评论容易卡死）
+        on_progress:   可选回调 on_progress(done:int, total:int)，
+                       用于向 GUI 报告元文件下载进度（不含评论抓取阶段）。
 
     Returns:
         dict: 下载结果
     """
+    def _prog(done, total):
+        if on_progress:
+            try:
+                on_progress(int(done), int(total))
+            except Exception:
+                pass
     if not output_dir:
         try:
             from src.paths import default_download_dir
@@ -1040,9 +1049,11 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
                     filename = _sanitize_filename(title) + ".mp4"
                     file_path = out_dir / filename
                     _print("[*] 正在下载视频...")
+                    _prog(0, 1)
                     file_size = _download_file(video_url, file_path)
                     result["file_path"] = str(file_path)
                     result["file_size"] = file_size
+                    _prog(1, 1)
 
                 return result
 
@@ -1119,24 +1130,25 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
                     total_size = 0
                     ok_count = 0
                     fail_count = 0
-                    for slide in slides:
+                    _n = len(slides)
+                    for _i, slide in enumerate(slides):
                         idx = slide["index"] + 1
                         if slide.get("media_type") == "video":
                             # 下载视频
                             video_url = slide.get("video_url", "")
                             if not video_url:
-                                _print(f"  [{idx}/{len(slides)}] ! 第 {idx} 页视频: 无法获取视频地址，跳过")
+                                _print(f"  [{idx}/{_n}] ! 第 {idx} 页视频: 无法获取视频地址，跳过")
                                 fail_count += 1
-                                continue
-                            filename = _sanitize_filename(title) + f"_S{idx:02d}.mp4"
-                            file_path = folder / filename
-                            _print(f"  [{idx}/{len(slides)}] 下载视频: {file_path.name}")
-                            try:
-                                total_size += _download_file(video_url, file_path)
-                                ok_count += 1
-                            except Exception as e:
-                                fail_count += 1
-                                _print(f"  [!] 第 {idx} 页视频下载失败: {e}")
+                            else:
+                                filename = _sanitize_filename(title) + f"_S{idx:02d}.mp4"
+                                file_path = folder / filename
+                                _print(f"  [{idx}/{_n}] 下载视频: {file_path.name}")
+                                try:
+                                    total_size += _download_file(video_url, file_path)
+                                    ok_count += 1
+                                except Exception as e:
+                                    fail_count += 1
+                                    _print(f"  [!] 第 {idx} 页视频下载失败: {e}")
                         else:
                             # 下载图片
                             img_url = slide.get("best_image_url", "")
@@ -1144,22 +1156,23 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
                                 # 从 urlList 中任取一个
                                 img_url = (slide.get("image_urls") or [""])[0]
                             if not img_url:
-                                _print(f"  [{idx}/{len(slides)}] ! 第 {idx} 页图片: 无法获取图片地址，跳过")
+                                _print(f"  [{idx}/{_n}] ! 第 {idx} 页图片: 无法获取图片地址，跳过")
                                 fail_count += 1
-                                continue
-                            ext = ".webp"
-                            if ".jpeg" in img_url or ".jpg" in img_url:
-                                ext = ".jpg"
-                            elif ".png" in img_url:
-                                ext = ".png"
-                            file_path = folder / f"S{idx:02d}{ext}"
-                            _print(f"  [{idx}/{len(slides)}] 下载图片: {file_path.name}")
-                            try:
-                                total_size += _download_image_via_playwright(page, img_url, file_path)
-                                ok_count += 1
-                            except Exception as e:
-                                fail_count += 1
-                                _print(f"  [!] 第 {idx} 页图片下载失败: {e}")
+                            else:
+                                ext = ".webp"
+                                if ".jpeg" in img_url or ".jpg" in img_url:
+                                    ext = ".jpg"
+                                elif ".png" in img_url:
+                                    ext = ".png"
+                                file_path = folder / f"S{idx:02d}{ext}"
+                                _print(f"  [{idx}/{_n}] 下载图片: {file_path.name}")
+                                try:
+                                    total_size += _download_image_via_playwright(page, img_url, file_path)
+                                    ok_count += 1
+                                except Exception as e:
+                                    fail_count += 1
+                                    _print(f"  [!] 第 {idx} 页图片下载失败: {e}")
+                        _prog(ok_count + fail_count, _n)
 
                     result["ok_count"] = ok_count
                     result["fail_count"] = fail_count
@@ -1234,20 +1247,23 @@ def download_douyin(url: str, output_dir: str = "", mode: int = 1,
                     total_size = 0
                     ok_count = 0
                     fail_count = 0
+                    _n = len(image_urls)
                     for i, img_url in enumerate(image_urls, 1):
                         ext = ".webp"
                         if ".jpeg" in img_url or ".jpg" in img_url: ext = ".jpg"
                         elif ".png" in img_url: ext = ".png"
                         file_path = folder / f"{i:03d}{ext}"
                         if file_path.exists() and file_path.stat().st_size > 0:
-                            ok_count += 1; continue
-                        _print(f"  [{i}/{len(image_urls)}] 下载: {file_path.name}")
-                        try:
-                            total_size += _download_image_via_playwright(page, img_url, file_path)
                             ok_count += 1
-                        except Exception as e:
-                            fail_count += 1
-                            _print(f"  [!] 第 {i} 张失败: {e}")
+                        else:
+                            _print(f"  [{i}/{_n}] 下载: {file_path.name}")
+                            try:
+                                total_size += _download_image_via_playwright(page, img_url, file_path)
+                                ok_count += 1
+                            except Exception as e:
+                                fail_count += 1
+                                _print(f"  [!] 第 {i} 张失败: {e}")
+                        _prog(ok_count + fail_count, _n)
                     result["ok_count"] = ok_count
                     result["fail_count"] = fail_count
                     result["total_size"] = total_size

@@ -56,7 +56,7 @@ QPushButton[role="secondary"] { background: #2a2a30; color: #f0f1f3; }
 QPushButton[role="secondary"]:hover { background: #353540; }
 QPushButton[role="danger"] { background: #c0302a; color: #ffffff; }
 QPushButton[role="danger"]:hover { background: #d8403a; }
-QPushButton[role="ghost"] { background: transparent; color: #9aa0aa; padding: 4px 8px; min-height: 0; }
+QPushButton[role="ghost"] { background: transparent; color: #9aa0aa; padding: 6px 12px; min-height: 22px; }
 QPushButton[role="ghost"]:hover { color: #f0f1f3; }
 
 QCheckBox { color: #f0f1f3; spacing: 6px; background: transparent; }
@@ -224,12 +224,21 @@ class DownloadWorker(QtCore.QObject):
         out.mkdir(parents=True, exist_ok=True)
 
         # 若全选 → 整作品下载(含数据JSON/评论由 download_douyin 统一编排)
+        # 关键：mode 必须跟随「同时抓评论」勾选——download_douyin 只在 mode∈{2,3}
+        # 时才抓评论。此前硬编码 mode=1 导致勾「同时抓评论」也永远不抓评论。
         if total > 0 and self._all_selected():
-            self.log.emit(f"[*] 全选，整作品下载到: {out}")
+            mode = 3 if self.fetch_comments else 1
+            self.log.emit(f"[*] 全选，整作品下载(mode={mode}{'，含评论' if mode == 3 else ''})到: {out}")
+            # 整作品下载内部(逐个图集/视频)会通过 on_progress 上报进度，
+            # 让进度条平滑推进而非 0→100 一次性跳变。
+            self.progress.emit(0, 1)
             try:
                 r = download_douyin(self.url, output_dir=str(out),
-                                    mode=1, fetch_comments=self.fetch_comments)
+                                    mode=mode, fetch_comments=self.fetch_comments,
+                                    on_progress=lambda d, t: self.progress.emit(d, t))
                 self.log.emit(f"[+] 完成: {r.get('title','')[:40]} → {r.get('file_path') or r.get('folder','')}")
+                if r.get("comment_json"):
+                    self.log.emit(f"[+] 评论/数据 JSON: {r['comment_json']}")
                 ok = 1
             except Exception as e:
                 self.log.emit(f"[x] 下载失败: {e}")
@@ -457,15 +466,18 @@ class MainWindow(QtWidgets.QMainWindow):
         sel_row.setSpacing(10)
         self.check_all = QtWidgets.QCheckBox("全选")
         self.check_all.setChecked(True)
+        self.check_all.setEnabled(False)
         self.check_all.stateChanged.connect(self.toggle_all)
         sel_row.addWidget(self.check_all)
-        btn_none = QtWidgets.QPushButton("全不选")
-        btn_none.setProperty("role", "ghost")
-        btn_none.setCursor(QtCore.Qt.PointingHandCursor)
-        btn_none.clicked.connect(lambda: self._set_all(False))
-        sel_row.addWidget(btn_none)
+        self.btn_none = QtWidgets.QPushButton("全不选")
+        self.btn_none.setProperty("role", "ghost")
+        self.btn_none.setCursor(QtCore.Qt.PointingHandCursor)
+        self.btn_none.setEnabled(False)
+        self.btn_none.clicked.connect(lambda: self._set_all(False))
+        sel_row.addWidget(self.btn_none)
         sel_row.addStretch()
         self.check_comments = QtWidgets.QCheckBox("同时抓评论")
+        self.check_comments.setEnabled(False)
         sel_row.addWidget(self.check_comments)
         right.addLayout(sel_row)
         il.addLayout(right, 2)
@@ -647,6 +659,10 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self.btn_preview.setEnabled(False)
         self.btn_download.setEnabled(False)
+        # 解析进行中：禁用选择控件，防止旧的勾选/目录在没有媒体时空转
+        self.check_all.setEnabled(False)
+        self.btn_none.setEnabled(False)
+        self.check_comments.setEnabled(False)
         self.title_lbl.setText("解析中…")
         self.stats_lbl.setText("")
         self.media_list.clear()
@@ -667,6 +683,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if r.get("error"):
             self.title_lbl.setText(f"解析失败: {r['error']}")
             self.log(f"[x] 解析失败: {r['error']}")
+            # 解析失败：选择/下载控件保持禁用
+            self._set_post_preview_enabled(False)
             return
         kind = r.get("type", "unknown")
         title = r.get("title", "") or "(无标题)"
@@ -681,8 +699,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.items.append(d)
         self.check_all.setChecked(True)
         self._populate()
-        self.btn_download.setEnabled(bool(self.items))
+        self._set_post_preview_enabled(bool(self.items))
         self.log(f"[+] 解析完成: {kind}，{len(self.items)} 个媒体")
+
+    def _set_post_preview_enabled(self, on: bool):
+        """解析成功且有媒体时启用 全选/全不选/同时抓评论/下载；否则禁用。"""
+        has = on and bool(self.items)
+        self.check_all.setEnabled(has)
+        self.btn_none.setEnabled(has)
+        self.check_comments.setEnabled(has)
+        self.btn_download.setEnabled(has)
+        # 解析失败/空列表时强制禁用下载，避免误触
+        if not has:
+            self.btn_download.setEnabled(False)
 
     def _populate(self):
         self.media_list.clear()
