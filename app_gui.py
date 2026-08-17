@@ -469,12 +469,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.check_all.setEnabled(False)
         self.check_all.stateChanged.connect(self.toggle_all)
         sel_row.addWidget(self.check_all)
-        self.btn_none = QtWidgets.QPushButton("全不选")
-        self.btn_none.setProperty("role", "ghost")
-        self.btn_none.setCursor(QtCore.Qt.PointingHandCursor)
-        self.btn_none.setEnabled(False)
-        self.btn_none.clicked.connect(lambda: self._set_all(False))
-        sel_row.addWidget(self.btn_none)
         sel_row.addStretch()
         self.check_comments = QtWidgets.QCheckBox("同时抓评论")
         self.check_comments.setEnabled(False)
@@ -661,7 +655,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_download.setEnabled(False)
         # 解析进行中：禁用选择控件，防止旧的勾选/目录在没有媒体时空转
         self.check_all.setEnabled(False)
-        self.btn_none.setEnabled(False)
         self.check_comments.setEnabled(False)
         self.title_lbl.setText("解析中…")
         self.stats_lbl.setText("")
@@ -703,10 +696,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log(f"[+] 解析完成: {kind}，{len(self.items)} 个媒体")
 
     def _set_post_preview_enabled(self, on: bool):
-        """解析成功且有媒体时启用 全选/全不选/同时抓评论/下载；否则禁用。"""
+        """解析成功且有媒体时启用 全选/同时抓评论/下载；否则禁用。"""
         has = on and bool(self.items)
         self.check_all.setEnabled(has)
-        self.btn_none.setEnabled(has)
         self.check_comments.setEnabled(has)
         self.btn_download.setEnabled(has)
         # 解析失败/空列表时强制禁用下载，避免误触
@@ -799,6 +791,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_cancel.setEnabled(True)
         self.progress.setValue(0)
         self._dl_all_flag = all_sel
+        # 下载开始：自动展开日志，让用户看到进度/错误(默认收起会显得"点了没反应")
+        self.log_view.setVisible(True)
+        self.log("[*] 开始下载…")
+        self.log(f"    媒体 {total} 个，{'全选→整作品下载' if all_sel else f'已选 {sum(selected_mask)} 个→逐页下载'}"
+                 f"{('，含评论' if fetch_c else '')}")
 
         self.dl_thread = QtCore.QThread()
         worker = DownloadWorker(self.url_edit.text().strip(), out, to_download, fetch_c)
