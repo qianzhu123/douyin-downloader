@@ -139,7 +139,7 @@ class PreviewWorker(QtCore.QObject):
 
 # ── 缩略图异步加载 ──────────────────────────────────────────
 class ThumbLoader(QtCore.QThread):
-    loaded = QtCore.pyqtSignal(int, QtGui.QPixmap)
+    loaded = QtCore.pyqtSignal(int, object)
 
     def __init__(self, items):
         super().__init__()
@@ -161,13 +161,19 @@ class ThumbLoader(QtCore.QThread):
             return
         try:
             r = httpx.get(url, timeout=20, follow_redirects=True,
-                          headers={"User-Agent": "Mozilla/5.0", "Referer": "https://www.douyin.com/"})
+                          headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                                  "Chrome/146.0.0.0 Safari/537.36",
+                                   "Referer": "https://www.douyin.com/"})
             pix = QtGui.QPixmap()
             pix.loadFromData(r.content)
             if not pix.isNull():
                 self.loaded.emit(i, pix)
+            else:
+                # 解码失败：emit None 让卡片显示"封面失败"而非永远"加载中"
+                self.loaded.emit(i, None)
         except Exception:
-            pass
+            self.loaded.emit(i, None)
 
     def stop(self):
         self._stop = True
@@ -380,7 +386,10 @@ class MediaItemWidget(QtWidgets.QWidget):
                                   QtCore.Qt.SmoothTransformation)
         self.thumb.setPixmap(scaled)
 
-    def set_thumb(self, pix: QtGui.QPixmap):
+    def set_thumb(self, pix):
+        if pix is None:
+            self.thumb.setText("封面加载失败")
+            return
         self._pix = pix
         self._render_thumb()
 
