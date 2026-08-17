@@ -27,76 +27,81 @@ from src.downloader import extract_preview, download_douyin, _download_file, _sa
 APP_NAME = "抖音下载器"
 QS = QtCore.QSize
 
-# ── 深色主题（统一字号/灰阶/层次，避免大小不一与暗淡） ─────────
-# 灰阶：正文 #f0f1f3 · 次要 #b8bdc4 · 提示 #8a909a · 背景 #25272b · 卡片/输入 #2d3036 · 边框 #3c4048
+# ── 深色主题：抖音黑 + 品红极简（去 AI 味） ─────────────────
+# 灰阶：正文 #f0f1f3 · 次要 #9aa0aa · 提示 #6c6f76 · 背景 #0f0f12 · 卡片 #1b1b20 · 边框 #2a2a30
 QSS = """
-* { font-family: "Microsoft YaHei UI","Microsoft YaHei","Segoe UI"; }
-QMainWindow, QWidget#central { background: #25272b; color: #f0f1f3; }
+* { font-family: "Microsoft YaHei UI","Microsoft YaHei","Segoe UI"; font-size: 14px; }
+QMainWindow, QWidget#central { background: #0f0f12; color: #f0f1f3; }
 QLabel { color: #f0f1f3; background: transparent; }
-QWidget#card, QGroupBox, QListWidget, QPlainTextEdit, QLineEdit, QTextEdit {
-  background: #2d3036; color: #f0f1f3; border: 1px solid #3c4048;
-  border-radius: 8px; padding: 6px;
+
+/* 卡片/输入容器 —— 用边框+略亮底模拟分组层次(QSS 无 box-shadow) */
+QFrame#card { background: #1b1b20; border: 1px solid #2a2a30; border-radius: 8px; }
+QFrame#toolbar { background: #16161a; border: 1px solid #2a2a30; border-radius: 8px; }
+
+QLineEdit, QPlainTextEdit, QTextEdit {
+  background: #1b1b20; color: #f0f1f3; border: 1px solid #2a2a30;
+  border-radius: 6px; padding: 7px 10px;
 }
-QLineEdit, QPlainTextEdit, QTextEdit { selection-background-color: #2f8cff; }
-QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus { border-color: #2f8cff; }
-QLineEdit { padding: 10px 14px; }
+QLineEdit, QPlainTextEdit, QTextEdit { selection-background-color: #fe2c55; }
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus { border-color: #fe2c55; }
 
 QPushButton {
-  background: #2f8cff; color: #ffffff; border: none; border-radius: 8px;
-  padding: 12px 26px; font-weight: 600; min-height: 28px;
+  background: #fe2c55; color: #ffffff; border: none; border-radius: 6px;
+  padding: 7px 18px; font-weight: 600; min-height: 24px;
 }
-QPushButton:hover { background: #4a9bff; }
-QPushButton:pressed { background: #2570d8; }
-QPushButton:disabled { background: #3c4048; color: #6a6f78; }
-QPushButton[role="secondary"] { background: #3c4048; color: #f0f1f3; }
-QPushButton[role="secondary"]:hover { background: #4a4f57; }
-QPushButton[role="danger"] { background: #d2473a; color: #ffffff; }
-QPushButton[role="danger"]:hover { background: #e25a4d; }
+QPushButton:hover { background: #ff406b; }
+QPushButton:pressed { background: #d11f44; }
+QPushButton:disabled { background: #2a2a30; color: #6c6f76; }
+QPushButton[role="secondary"] { background: #2a2a30; color: #f0f1f3; }
+QPushButton[role="secondary"]:hover { background: #353540; }
+QPushButton[role="danger"] { background: #c0302a; color: #ffffff; }
+QPushButton[role="danger"]:hover { background: #d8403a; }
+QPushButton[role="ghost"] { background: transparent; color: #9aa0aa; padding: 4px 8px; min-height: 0; }
+QPushButton[role="ghost"]:hover { color: #f0f1f3; }
 
-QCheckBox { color: #f0f1f3; spacing: 8px; background: transparent; }
+QCheckBox { color: #f0f1f3; spacing: 6px; background: transparent; }
+QCheckBox::indicator { width: 15px; height: 15px; border-radius: 3px; border: 1px solid #3a3a44; background: #16161a; }
+QCheckBox::indicator:hover { border-color: #fe2c55; }
+QCheckBox::indicator:checked { background: #fe2c55; border-color: #fe2c55; }
 
 QProgressBar {
-  background: #2d3036; border: 1px solid #3c4048; border-radius: 8px;
-  text-align: center; color: #f0f1f3; height: 26px; min-height: 26px;
+  background: #16161a; border: 1px solid #2a2a30; border-radius: 6px;
+  text-align: center; color: #f0f1f3; height: 22px; min-height: 22px;
 }
-QProgressBar::chunk { background: #2f8cff; border-radius: 7px; }
+QProgressBar::chunk { background: #fe2c55; border-radius: 5px; }
 
-QListWidget { border-radius: 8px; outline: 0; }
-QListWidget::item { padding: 10px; border-radius: 6px; }
-QListWidget::item:selected { background: #2f8cff; color: #ffffff; }
+QListWidget { background: #0f0f12; border: 1px solid #2a2a30; border-radius: 8px; outline: 0; }
+QListWidget::item { padding: 0; border-radius: 6px; }
+QListWidget::item:selected { background: rgba(254,44,85,40); }
 
-QStatusBar { background: #25272b; color: #f0f1f3; font-weight: 600; border-top: 1px solid #3c4048; }
-QStatusBar QLabel { color: #f0f1f3; padding: 2px 6px; }
+QStatusBar { background: #16161a; color: #9aa0aa; border-top: 1px solid #2a2a30; }
+QStatusBar QLabel { color: #9aa0aa; padding: 2px 6px; }
 
-QMessageBox { background: #2d3036; }
+QMessageBox { background: #1b1b20; }
 QMessageBox QLabel, QMessageBox QTextEdit { color: #f0f1f3; }
 QMessageBox QPushButton {
-  background: #2f8cff; color: #ffffff; border: none; border-radius: 8px;
-  padding: 10px 28px; font-weight: 600; min-width: 110px;
+  background: #fe2c55; color: #ffffff; border: none; border-radius: 6px;
+  padding: 8px 24px; font-weight: 600; min-width: 96px;
 }
-QMessageBox QPushButton:hover { background: #4a9bff; }
-QMessageBox QPushButton[role="secondary"] { background: #3c4048; color: #f0f1f3; }
-QDBusArgument { } /* noop */
+QMessageBox QPushButton:hover { background: #ff406b; }
+QMessageBox QPushButton[role="secondary"] { background: #2a2a30; color: #f0f1f3; }
 
-QDialog { background: #25272b; color: #f0f1f3; }
-QToolTip { color: #f0f1f3; background: #2d3036; border: 1px solid #2f8cff; padding: 4px 8px; }
+QDialog { background: #0f0f12; color: #f0f1f3; }
+QToolTip { color: #f0f1f3; background: #1b1b20; border: 1px solid #fe2c55; padding: 4px 8px; }
 
-QScrollBar:vertical { background: transparent; width: 12px; border: none; margin: 2px; }
-QScrollBar::handle:vertical { background: #4a4f57; border-radius: 5px; min-height: 28px; }
-QScrollBar::handle:vertical:hover { background: #5a5f68; }
+QScrollBar:vertical { background: transparent; width: 10px; border: none; margin: 2px; }
+QScrollBar::handle:vertical { background: #2a2a30; border-radius: 4px; min-height: 28px; }
+QScrollBar::handle:vertical:hover { background: #3a3a44; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical, QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; height: 0; width: 0; }
-QScrollBar:horizontal { background: transparent; height: 12px; border: none; margin: 2px; }
-QScrollBar::handle:horizontal { background: #4a4f57; border-radius: 5px; min-width: 28px; }
-QScrollBar::handle:horizontal:hover { background: #5a5f68; }
+QScrollBar:horizontal { background: transparent; height: 10px; border: none; margin: 2px; }
+QScrollBar::handle:horizontal { background: #2a2a30; border-radius: 4px; min-width: 28px; }
+QScrollBar::handle:horizontal:hover { background: #3a3a44; }
 
-QSplitter::handle { background: #3c4048; }
-QSplitter::handle:hover { background: #2f8cff; }
-
-QGroupBox { margin-top: 14px; padding-top: 14px; }
-QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; color: #b8bdc4; }
+QSplitter::handle { background: #2a2a30; }
+QSplitter::handle:hover { background: #fe2c55; }
 """
 
-TYP_BADGE = {"video": "📹 视频", "image": "🖼 图片", "unknown": "❓"}
+TYP_BADGE = {"video": "视频", "image": "图", "unknown": "?"}
 
 
 def _fmt_stats(s: dict) -> str:
@@ -288,62 +293,94 @@ class DownloadWorker(QtCore.QObject):
 
 # ── 媒体卡片项 ─────────────────────────────────────────────
 class MediaItemWidget(QtWidgets.QWidget):
+    # cell 尺寸由外部 _relayout_grid() 下发；内部不固定死，缩略图随窗口放大
     def __init__(self, index, media_type, cover_url, duration_ms, on_toggle_media):
         super().__init__()
         self.index = index
         self.media_type = media_type
+        self._cell_w = 200
+        self._cell_h = 260
+        self._pix: QtGui.QPixmap | None = None
+
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        # 顶部：勾选 #序号 居左
         self.check = QtWidgets.QCheckBox(f"#{index + 1}")
         self.check.setChecked(True)
         self.check.stateChanged.connect(lambda st: on_toggle_media(index, st == QtCore.Qt.Checked))
-        # 角标
-        badge = QtWidgets.QLabel(TYP_BADGE.get(media_type, ""))
-        badge.setStyleSheet("color:#ffe08a;font-weight:700;background:#000000b0;"
-                            "padding:1px 8px;border-radius:8px;")
-        badge.setFixedSize(72, 20)
-        # 缩略图占位
+        layout.addWidget(self.check, 0, QtCore.Qt.AlignLeft)
+
+        # 缩略图（尺寸随 cell_w/3:4 自适应，不 setFixedSize）
         self.thumb = QtWidgets.QLabel()
-        self.thumb.setFixedSize(120, 160)
         self.thumb.setAlignment(QtCore.Qt.AlignCenter)
-        self.thumb.setStyleSheet("background:#2d3036;border-radius:8px;color:#6a6f78;border:1px solid #3c4048;")
+        self.thumb.setStyleSheet("background:#16161a;border-radius:6px;color:#6c6f76;border:1px solid #2a2a30;")
         self.thumb.setText("加载中…")
+        # 角标：video=品红块、image=青块、unknown=灰块；白字、去 emoji
+        bcol = {"video": "#fe2c55", "image": "#11b5a4", "unknown": "#3a3a44"}.get(media_type, "#3a3a44")
+        self.badge = QtWidgets.QLabel(TYP_BADGE.get(media_type, ""))
+        self.badge.setStyleSheet(
+            f"color:#fff;font-weight:700;background:{bcol};"
+            "padding:1px 8px;border-radius:4px;")
+        self.badge.setFixedHeight(22)
+        # 时长
         self.duration_lbl = QtWidgets.QLabel("")
         if duration_ms:
             secs = duration_ms // 1000
             self.duration_lbl.setText(f"{secs//60:02d}:{secs%60:02d}")
-        self.duration_lbl.setStyleSheet("color:#b8bdc4;background:#000000b0;padding:1px 6px;border-radius:4px;")
-        # 叠加角标到缩略图
-        overlay = QtWidgets.QHBoxLayout()
-        overlay.setContentsMargins(4, 4, 4, 4)
-        holder = QtWidgets.QWidget()
-        holder.setFixedSize(120, 160)
-        ov = QtWidgets.QVBoxLayout(holder)
-        ov.setContentsMargins(0, 0, 0, 0)
-        ov.addWidget(badge, 0, QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+        self.duration_lbl.setStyleSheet(
+            "color:#f0f1f3;background:#000000b0;padding:1px 6px;border-radius:4px;")
+        self.duration_lbl.setFixedHeight(20)
+        # 叠加：角标左上、时长右下，跟随缩略图尺寸
+        self._holder = QtWidgets.QWidget()
+        ov = QtWidgets.QVBoxLayout(self._holder)
+        ov.setContentsMargins(6, 6, 6, 6)
+        ov.setSpacing(0)
+        ov.addWidget(self.badge, 0, QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
         ov.addStretch()
-        ov.addWidget(self.duration_lbl, 0, QtCore.Qt.AlignRight)
+        ov.addWidget(self.duration_lbl, 0, QtCore.Qt.AlignRight | QtCore.Qt.AlignBottom)
         stack = QtWidgets.QStackedLayout()
         stack.setStackingMode(QtWidgets.QStackedLayout.StackingMode.StackAll)
         stack.addWidget(self.thumb)
-        stack.addWidget(holder)
-        wrap = QtWidgets.QWidget()
-        wrap.setLayout(stack)
-        wrap.setFixedSize(120, 160)
-        layout.addWidget(self.check, 0, QtCore.Qt.AlignLeft)
-        layout.addWidget(wrap, 0, QtCore.Qt.AlignHCenter)
+        stack.addWidget(self._holder)
+        self._wrap = QtWidgets.QWidget()
+        self._wrap.setLayout(stack)
+        layout.addWidget(self._wrap, 1)
+        self.set_cell_size(200, 260)
+
+    def set_cell_size(self, w: int, h: int):
+        """外部 resize/_populate 下发 cell 尺寸：缩略图按 3:4 占 cell 宽，整卡高随附。"""
+        w = max(120, int(w))
+        self._cell_w = w
+        # 缩略图区：宽=w，高=w*4/3（竖向缩略图比例）
+        tw = w
+        th = int(tw * 4 / 3)
+        self._cell_h = th + 30  # 给顶部勾选留位
+        self.thumb.setMinimumSize(tw, th)
+        self._wrap.setFixedSize(tw, th)
+        if self._pix is not None:
+            self._render_thumb()
+
+    def _render_thumb(self):
+        if self._pix is None:
+            return
+        tw = self.thumb.minimumWidth() or self._cell_w
+        th = self.thumb.minimumHeight() or int(self._cell_w * 4 / 3)
+        scaled = self._pix.scaled(tw, th, QtCore.Qt.KeepAspectRatioByExpanding,
+                                  QtCore.Qt.SmoothTransformation)
+        self.thumb.setPixmap(scaled)
 
     def set_thumb(self, pix: QtGui.QPixmap):
-        scaled = pix.scaled(120, 160, QtCore.Qt.KeepAspectRatioByExpanding,
-                            QtCore.Qt.SmoothTransformation)
-        self.thumb.setPixmap(scaled)
+        self._pix = pix
+        self._render_thumb()
 
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME)
-        self.resize(980, 760)
+        self.resize(1100, 820)
         self.preview: dict | None = None
         self.items: list[dict] = []  # 当前预览的全部媒体(含 __kind 标记)
         self.thumb_loader: ThumbLoader | None = None
@@ -351,6 +388,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.preview_worker: PreviewWorker | None = None
         self.dl_thread: QtCore.QThread | None = None
         self.dl_worker: DownloadWorker | None = None
+        self._grid_cols = 5
+        self._log_expanded = False
         self._build_ui()
         self._default_out_dir()
 
@@ -364,70 +403,114 @@ class MainWindow(QtWidgets.QMainWindow):
         central.setObjectName("central")
         self.setCentralWidget(central)
         root = QtWidgets.QVBoxLayout(central)
-        root.setContentsMargins(12, 12, 12, 12)
+        root.setContentsMargins(14, 14, 14, 10)
         root.setSpacing(10)
 
-        # ── 顶部：链接输入 + 解析预览 ──
-        top = QtWidgets.QHBoxLayout()
+        # ── 顶栏卡片：链接输入 + 解析预览（主操作条） ──
+        toolbar = QtWidgets.QFrame()
+        toolbar.setObjectName("toolbar")
+        tb = QtWidgets.QHBoxLayout(toolbar)
+        tb.setContentsMargins(10, 8, 10, 8)
+        tb.setSpacing(8)
         self.url_edit = QtWidgets.QLineEdit()
         self.url_edit.setPlaceholderText("粘贴抖音链接 / user/self?modal_id=... 喜欢列表 / 分享文案…")
         self.url_edit.returnPressed.connect(self.do_preview)
-        top.addWidget(self.url_edit, 1)
+        tb.addWidget(self.url_edit, 1)
         self.btn_preview = QtWidgets.QPushButton("解析预览")
+        self.btn_preview.setCursor(QtCore.Qt.PointingHandCursor)
         self.btn_preview.clicked.connect(self.do_preview)
-        top.addWidget(self.btn_preview)
-        root.addLayout(top)
+        tb.addWidget(self.btn_preview)
+        root.addWidget(toolbar)
 
-        # ── 输出目录 ──
+        # ── 信息条卡片：作品标题/统计(左) + 输出目录 + 选择控件(右) ──
+        info = QtWidgets.QFrame()
+        info.setObjectName("card")
+        il = QtWidgets.QHBoxLayout(info)
+        il.setContentsMargins(12, 9, 12, 9)
+        il.setSpacing(10)
+        left = QtWidgets.QVBoxLayout()
+        left.setSpacing(2)
+        self.title_lbl = QtWidgets.QLabel("尚未解析")
+        self.title_lbl.setStyleSheet("font-size:18px;font-weight:600;color:#f0f1f3;")
+        self.stats_lbl = QtWidgets.QLabel("")
+        self.stats_lbl.setStyleSheet("color:#9aa0aa;")
+        left.addWidget(self.title_lbl)
+        left.addWidget(self.stats_lbl)
+        il.addLayout(left, 1)
+        # 右侧：输出目录 + 抓评论
+        right = QtWidgets.QVBoxLayout()
+        right.setSpacing(5)
         out_row = QtWidgets.QHBoxLayout()
-        out_row.addWidget(QtWidgets.QLabel("输出目录:"))
+        out_row.setSpacing(6)
+        ol = QtWidgets.QLabel("目录")
+        ol.setStyleSheet("color:#9aa0aa;")
+        out_row.addWidget(ol)
         self.out_edit = QtWidgets.QLineEdit()
         out_row.addWidget(self.out_edit, 1)
-        btn_pick = QtWidgets.QPushButton("更改…")
+        btn_pick = QtWidgets.QPushButton("更改")
         btn_pick.setProperty("role", "secondary")
+        btn_pick.setCursor(QtCore.Qt.PointingHandCursor)
         btn_pick.clicked.connect(self.pick_dir)
         out_row.addWidget(btn_pick)
-        root.addLayout(out_row)
-
-        # ── 信息条 ──
-        self.title_lbl = QtWidgets.QLabel("尚未解析")
-        self.title_lbl.setStyleSheet("font-weight:600;padding:4px 0;")
-        root.addWidget(self.title_lbl)
-        self.stats_lbl = QtWidgets.QLabel("")
-        self.stats_lbl.setStyleSheet("color:#b8bdc4;")
-        root.addWidget(self.stats_lbl)
-
-        # ── 媒体网格 + 选择控件 ──
+        right.addLayout(out_row)
         sel_row = QtWidgets.QHBoxLayout()
-        self.check_comments = QtWidgets.QCheckBox("同时抓评论")
+        sel_row.setSpacing(10)
         self.check_all = QtWidgets.QCheckBox("全选")
         self.check_all.setChecked(True)
         self.check_all.stateChanged.connect(self.toggle_all)
         sel_row.addWidget(self.check_all)
         btn_none = QtWidgets.QPushButton("全不选")
-        btn_none.setProperty("role", "secondary")
+        btn_none.setProperty("role", "ghost")
+        btn_none.setCursor(QtCore.Qt.PointingHandCursor)
         btn_none.clicked.connect(lambda: self._set_all(False))
         sel_row.addWidget(btn_none)
         sel_row.addStretch()
+        self.check_comments = QtWidgets.QCheckBox("同时抓评论")
         sel_row.addWidget(self.check_comments)
-        root.addLayout(sel_row)
+        right.addLayout(sel_row)
+        il.addLayout(right, 2)
+        root.addWidget(info)
 
+        # ── 媒体网格（自适应 5 列，cell 随宽度放大） ──
+        # 用 grid_host 包一层：空状态时叠加居中提示，避免中间一大片纯黑留白显得过大
+        self.grid_host = QtWidgets.QFrame()
+        gh = QtWidgets.QVBoxLayout(self.grid_host)
+        gh.setContentsMargins(0, 0, 0, 0)
+        gh.setSpacing(0)
         self.media_list = QtWidgets.QListWidget()
         self.media_list.setFlow(QtWidgets.QListView.LeftToRight)
         self.media_list.setWrapping(True)
         self.media_list.setResizeMode(QtWidgets.QListView.Adjust)
-        self.media_list.setSpacing(8)
+        self.media_list.setSpacing(10)
         self.media_list.setViewMode(QtWidgets.QListView.IconMode)
-        self.media_list.setIconSize(QS(120, 160))
-        root.addWidget(self.media_list, 1)
+        self.media_list.setUniformItemSizes(True)
+        self.media_list.setMovement(QtWidgets.QListView.Static)
+        gh.addWidget(self.media_list, 1)
+        # 空状态提示：叠加在网格上方、居中，有内容时隐藏
+        self.empty_hint = QtWidgets.QLabel(
+            "粘贴链接并「解析预览」后，作品缩略图将显示在此", self.grid_host)
+        self.empty_hint.setAlignment(QtCore.Qt.AlignCenter)
+        self.empty_hint.setStyleSheet(
+            "color:#6c6f76;font-size:14px;background:transparent;")
+        self._position_empty_hint()
+        self.empty_hint.show()
+        root.addWidget(self.grid_host, 1)
 
-        # ── 下载按钮 + 进度 ──
+        # ── 底栏卡片：下载/取消 + 进度 + 日志折叠 ──
+        botcard = QtWidgets.QFrame()
+        botcard.setObjectName("card")
+        bl = QtWidgets.QVBoxLayout(botcard)
+        bl.setContentsMargins(10, 8, 10, 8)
+        bl.setSpacing(6)
         bot = QtWidgets.QHBoxLayout()
+        bot.setSpacing(8)
         self.btn_download = QtWidgets.QPushButton("下载已选")
+        self.btn_download.setCursor(QtCore.Qt.PointingHandCursor)
         self.btn_download.clicked.connect(self.do_download)
         self.btn_download.setEnabled(False)
         self.btn_cancel = QtWidgets.QPushButton("取消")
         self.btn_cancel.setProperty("role", "secondary")
+        self.btn_cancel.setCursor(QtCore.Qt.PointingHandCursor)
         self.btn_cancel.clicked.connect(self.cancel_download)
         self.btn_cancel.setEnabled(False)
         self.progress = QtWidgets.QProgressBar()
@@ -435,13 +518,20 @@ class MainWindow(QtWidgets.QMainWindow):
         bot.addWidget(self.btn_download)
         bot.addWidget(self.btn_cancel)
         bot.addWidget(self.progress, 1)
-        root.addLayout(bot)
-
-        # ── 日志 ──
+        btn_log = QtWidgets.QPushButton("日志 ▾")
+        btn_log.setProperty("role", "ghost")
+        btn_log.setCursor(QtCore.Qt.PointingHandCursor)
+        btn_log.setCheckable(True)
+        btn_log.toggled.connect(self._toggle_log)
+        bot.addWidget(btn_log)
+        bl.addLayout(bot)
+        # 日志默认收起
         self.log_view = QtWidgets.QPlainTextEdit()
         self.log_view.setReadOnly(True)
-        self.log_view.setMaximumHeight(160)
-        root.addWidget(self.log_view)
+        self.log_view.setVisible(False)
+        self.log_view.setMaximumHeight(170)
+        bl.addWidget(self.log_view)
+        root.addWidget(botcard)
 
         self.status = self.statusBar()
         self.btn_login = QtWidgets.QPushButton("登录")
@@ -451,6 +541,62 @@ class MainWindow(QtWidgets.QMainWindow):
         self.status.addPermanentWidget(self.btn_login)
         self._lw_alive = False
         self.status.showMessage(f"{APP_NAME} · 就绪")
+
+    def _toggle_log(self, on):
+        self._log_expanded = on
+        self.log_view.setVisible(on)
+
+    def _position_empty_hint(self):
+        """把空状态提示居中叠加在 grid_host 上。"""
+        if not hasattr(self, "empty_hint"):
+            return
+        hs = self.grid_host.size()
+        self.empty_hint.resize(hs)
+        self.empty_hint.move(0, 0)
+        self.empty_hint.raise_()
+
+    def _update_empty_hint(self):
+        """有作品时隐藏空状态提示，无作品时显示。"""
+        if not hasattr(self, "empty_hint"):
+            return
+        empty = self.media_list.count() == 0
+        self.empty_hint.setVisible(empty)
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        self._relayout_grid()
+        self._position_empty_hint()
+
+    def _cell_w(self):
+        vw = self.media_list.viewport().width() or self.media_list.width() or 600
+        spacing = self.media_list.spacing()
+        margin = 8  # ListWidget 内边距余量
+        w = (vw - spacing * (self._grid_cols - 1) - margin) // self._grid_cols
+        return max(120, int(w))
+
+    def _relayout_grid(self):
+        """按 viewport 算 5 列 cell 宽，刷新已存在 item 的 sizeHint + 卡片 cell 尺寸。"""
+        if not hasattr(self, "media_list"):
+            return
+        cell_w = self._cell_w()
+        if cell_w == getattr(self, "_last_cell_w", 0):
+            return
+        self._last_cell_w = cell_w
+        th = int(cell_w * 4 / 3)
+        item_w = cell_w + 4
+        item_h = th + 30
+        for i in range(self.media_list.count()):
+            wi = self.media_list.item(i)
+            if wi:
+                wi.setSizeHint(QS(item_w, item_h))
+                w = self.media_list.itemWidget(wi)
+                if isinstance(w, MediaItemWidget):
+                    w.set_cell_size(cell_w, item_h)
+
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        # 首次 show 后 viewport 有宽，算一次列宽，避免 120 闪现
+        QtCore.QTimer.singleShot(0, lambda: (self._relayout_grid(), self._position_empty_hint()))
 
     # ── 登录(子线程，避免阻塞 UI) ──
     def start_login(self):
@@ -524,8 +670,9 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         kind = r.get("type", "unknown")
         title = r.get("title", "") or "(无标题)"
-        self.title_lbl.setText(f"{TYP_BADGE.get(kind, '')}  {title}")
-        self.stats_lbl.setText(_fmt_stats(r.get("stats", {})))
+        self.title_lbl.setText(title)
+        stat = _fmt_stats(r.get("stats", {}))
+        self.stats_lbl.setText(f"· {kind} · {stat}" if stat else f"· {kind}")
         raw = r.get("items", [])
         self.items = []
         for it in raw:
@@ -546,8 +693,11 @@ class MainWindow(QtWidgets.QMainWindow):
                                 it.get("cover_url", ""), it.get("duration_ms", 0),
                                 self.on_toggle_one)
             item = QtWidgets.QListWidgetItem(self.media_list)
-            item.setSizeHint(QS(132, 220))
             self.media_list.setItemWidget(item, w)
+        # 按 viewport 算 5 列 cell 尺寸并下发到每个卡片
+        self._last_cell_w = 0  # 强制 _relayout_grid 重算
+        self._relayout_grid()
+        self._update_empty_hint()
         # 异步加载缩略图
         self.thumb_loader = ThumbLoader(self.items)
         self.thumb_loader.loaded.connect(self._set_thumb)
@@ -730,10 +880,18 @@ def main():
         _ensure_stdio_for_frozen()
     except Exception:
         pass
+
+    # ── 高 DPI 缩放：必须在 QApplication 创建之前设置 ──
+    # 背景：打包成 exe(noconsole)后，PyQt5 默认不会随 Windows 缩放(125/150%)
+    # 自适应，导致在高清 DPI 屏上整个界面(含字体)按物理像素渲染 → 整体偏小。
+    # 启用后 Qt 按 logical DP 自动放大字号与控件。
+    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+
     app = QtWidgets.QApplication(sys.argv)
     # 全局放大字体，解决界面文字偏小看不清
     _f = app.font()
-    _f.setPointSize(max(_f.pointSize() or 9, 11))
+    _f.setPointSize(max(_f.pointSize() or 9, 14))
     _f.setFamily("Microsoft YaHei UI, Microsoft YaHei, Segoe UI")
     app.setFont(_f)
     app.setStyleSheet(QSS)
