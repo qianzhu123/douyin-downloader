@@ -192,6 +192,38 @@ options:
   -c, --comments        Also scrape comments, disabled by default
 ```
 
+## Building the Windows EXE
+
+The GUI exe is built with PyInstaller via `build.bat`. The build interpreter **must be Python 3.11** — Python 3.13 (the conda base) hangs PyInstaller 6.x during Analysis (CPU 0, stuck at "Analyzing modules for base_library.zip").
+
+Interpreter priority in `build.bat`:
+
+1. `PYTHON_BUILD` environment variable (explicit override)
+2. Project-local `.venv` (Python 3.11, created via uv) — recommended
+3. `python` on PATH (fallback; warns if it is 3.13)
+
+Setup with uv (creates `.venv` with Python 3.11 and installs PyInstaller):
+
+```bash
+uv venv --python 3.11
+uv pip install pyinstaller --python .venv/Scripts/python.exe
+```
+
+Then double-click or run:
+
+```bat
+build.bat
+```
+
+Output: `dist\抖音下载器.exe` (onefile, bundled icon).
+
+Build-time notes (learned the hard way, keep in mind when editing `build.bat`):
+
+- `build.bat` is **GBK + CRLF** encoded with `chcp 936`; save it as UTF-8 and Chinese comments/echo will corrupt cmd parsing
+- Inside `if (...)` blocks, `%VAR%` is expanded **before** the block runs, so a variable set in the same block reads as empty — the interpreter probe uses `goto` flow instead of nested blocks for this reason
+- Half-width parentheses in `echo` text inside `if (...)` blocks break cmd parsing ("xxx was unexpected") — avoid parens in echoed strings
+- The spec fills `_runtime_hook_filled.py` at build time with the build machine's real site-packages (so the exe can reuse the host's Playwright install at runtime); it regenerates on every build and is gitignored
+
 ## FAQ
 
 ### 1. Browser not found after installation?

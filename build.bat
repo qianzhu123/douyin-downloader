@@ -1,43 +1,41 @@
 @echo off
-chcp 65001 >nul
+chcp 936 >nul
 REM douyin-downloader - PyInstaller build script (onefile GUI)
 setlocal
 cd /d "%~dp0."
-REM conda base çš„ Python 3.13 ä¼šè®© PyInstaller 6.x åœ¨ Analysis é˜¶æ®µåƒµæ­»
-REM (CPU 0ã€æ—¥å¿—åœåœ¨ "Analyzing modules for base_library.zip")ã€‚
-REM å¿…é¡»ç”¨ Python 3.11 æ‰“åŒ…(å®æµ‹ conda auto ç¯å¢ƒ OK)ã€‚ä¼˜å…ˆçº§:
-REM   1) PYTHON_BUILD env å˜é‡(ç”¨æˆ·æ˜¾å¼æŒ‡å®šè§£é‡Šå™¨)
-REM   2) conda auto ç¯å¢ƒ(3.11.15)
-REM   3) PATH ä¸Šçš„ python(å¯èƒ½ä»æ˜¯ 13ï¼Œä¼šæ­»é”â€”â€”ä»…ä½œæœ€åå…œåº•å¹¶è­¦å‘Š)
+REM conda base µÄ Python 3.13 »áÈÃ PyInstaller 6.x ÔÚ Analysis ½×¶Î½©ËÀ
+REM (CPU 0¡¢ÈÕÖ¾Í£ÔÚ "Analyzing modules for base_library.zip")¡£
+REM ±ØĞëÓÃ Python 3.11 ´ò°ü¡£Ô­ conda auto »·¾³ÒÑÉ¾,ÏÖÓÃÏîÄ¿ÄÚ uv venv¡£
+REM ×¢Òâ: cmd ÔÚ if(...) À¨ºÅ¿éÄÚ %var% Îª½øÈë¿éÇ°Õ¹¿ª,¹ÊÌ½²âÂß¼­È«²¿ÓÃ goto Á÷³Ì,²»ÓÃ¿éÄÚ±äÁ¿¡£
 set "PY="
 if defined PYTHON_BUILD (
     set "PY=%PYTHON_BUILD%"
-    echo [*] ä½¿ç”¨ PYTHON_BUILD=%PYTHON_BUILD%
-) else (
-    set "CONDA_AUTO=D:\tools\Dev\Runtime\Anaconda\envs\auto\python.exe"
-    if exist "%CONDA_AUTO%" (
-        set "PY=%CONDA_AUTO%"
-        echo [*] ä½¿ç”¨ conda auto (Python 3.11) è§£é‡Šå™¨æ‰“åŒ…
-    ) else (
-        echo [!] æœªæ‰¾åˆ° conda auto ç¯å¢ƒï¼Œå›é€€ PATH ä¸Šçš„ python(è‹¥æ˜¯ 3.13 ä¼šå¡æ­»!)
-        set "PY=python"
-    )
+    goto have_py
 )
-"%PY%" --version 2>nul || (echo [x] æ— å¯ç”¨ Python è§£é‡Šå™¨ & exit /b 1)
-set "APP_NAME=æŠ–éŸ³ä¸‹è½½å™¨"
+set "VENV_PY=%~dp0.venv\Scripts\python.exe"
+if exist "%VENV_PY%" (
+    set "PY=%VENV_PY%"
+    goto have_py
+)
+echo [!] Î´ÕÒµ½ÏîÄ¿ÄÚ .venv, ÇëÏÈÔËĞĞ: uv venv --python 3.11 È»ºó uv pip install pyinstaller
+echo [!] »ØÍË PATH ÉÏµÄ python, ÈôÊÇ 3.13 »á¿¨ËÀ
+set "PY=python"
+:have_py
+"%PY%" --version 2>nul || (echo [x] ÎŞ¿ÉÓÃ Python ½âÊÍÆ÷ & exit /b 1)
+set "APP_NAME=¶¶ÒôÏÂÔØÆ÷"
 
-echo [1/3] ç¡®ä¿ assets\app_icon.ico å­˜åœ¨...
+echo [1/3] È·±£ assets\app_icon.ico ´æÔÚ
 if not exist "assets\app_icon.ico" (
-    echo [*] ç”Ÿæˆå›¾æ ‡...
-    "%PY%" make_icon.py || (echo [x] å›¾æ ‡ç”Ÿæˆå¤±è´¥ & exit /b 1)
+    echo [*] Éú³ÉÍ¼±ê
+    "%PY%" make_icon.py || (echo [x] Í¼±êÉú³ÉÊ§°Ü & exit /b 1)
 )
 
-echo [2/3] æ¸…ç†æ—§äº§ç‰©...
+echo [2/3] ÇåÀí¾É²úÎï
 if exist "dist\%APP_NAME%.exe" del /q "dist\%APP_NAME%.exe"
-if exist "build\æŠ–éŸ³ä¸‹è½½å™¨" rmdir /s /q "build\æŠ–éŸ³ä¸‹è½½å™¨"
+if exist "build\¶¶ÒôÏÂÔØÆ÷" rmdir /s /q "build\¶¶ÒôÏÂÔØÆ÷"
 
-echo [3/3] PyInstaller æ„å»º onefile (å«å›¾æ ‡)...
-"%PY%" -m PyInstaller --noconfirm --clean "æŠ–éŸ³ä¸‹è½½å™¨.spec"
+echo [3/3] PyInstaller ¹¹½¨ onefile, º¬Í¼±ê
+"%PY%" -m PyInstaller --noconfirm --clean "¶¶ÒôÏÂÔØÆ÷.spec"
 
 if exist "dist\%APP_NAME%.exe" (
     echo.
