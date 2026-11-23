@@ -38,7 +38,7 @@ set "RC=%ERRORLEVEL%"
 
 echo.
 if "%RC%"=="0" (
-    echo [OK] Login state is ready. You can now launch the downloader (dist\æŠ–éŸ³ä¸‹è½½å™¨.exe ^| python app_gui.py).
+    echo [OK] Login state is ready. You can now launch the downloader (dist\¶¶ÒôÏÂÔØÆ÷.exe ^| python app_gui.py).
 ) else (
     echo [FAIL] Login is not ready. Please follow the prompts above and retry.
 )
